@@ -18,21 +18,22 @@ class Point:
     def getY(self):
         return self.position[1]
     
-    def getY(self):
+    def getZ(self):
         return self.position[2]
 
 
 # DataStructure that Stores Information About Points and time they were entered
 class SpaceAndTime:
 
-    def __init__(self):
+    def __init__(self, func):
         # Represent full location set as a list of positions
         # Start time = 0 at index 0, each next point is a second
         self.spiderMovement = []
+        function = func
 
     def nextSecond(self, x, y, z):
         #Adds a point given it's x,yz and coordinates
-        self.spiderMovement.append(Position(x, y, z))
+        self.spiderMovement.append(Point(x, y, z))
 
     def get(self, second):
         if second > len(self.spiderMovement):
@@ -60,10 +61,13 @@ class SpaceAndTime:
 
     #TODO: Jason -- graphing
 
-    def draw2D(self):
-        t, x, y = self.getLists()
-        plotted = plt.plot(x,y)
-        plt.show()
+    def plot_points_3d(self):
+        x, y, z, t = self.getLists()
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x, y, z, c='b', marker='o')
+        
+    plt.show()
 
 
 
