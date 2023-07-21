@@ -2,12 +2,12 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-#TODO: Think about eliminating Position and Instead Making Double Lists
+# Class for points
+class Point:
+    def __init__(self, x, y, z):
+        #Points are defined in terms of immutable x,y,z tuple
+        self.position = (x, y,z)
 
-# Location Class to Find Position
-class Position:
-    def __init__(self, x, y):
-        self.position = (x, y)
 
     def __str__(self):
         return self.position
@@ -17,10 +17,12 @@ class Position:
 
     def getY(self):
         return self.position[1]
+    
+    def getY(self):
+        return self.position[2]
 
 
-# DataStructure that Gives Time Information
-
+# DataStructure that Stores Information About Points and time they were entered
 class SpaceAndTime:
 
     def __init__(self):
@@ -28,8 +30,9 @@ class SpaceAndTime:
         # Start time = 0 at index 0, each next point is a second
         self.spiderMovement = []
 
-    def nextSecond(self, x, y):
-        self.spiderMovement.append(Position(x, y))
+    def nextSecond(self, x, y, z):
+        #Adds a point given it's x,yz and coordinates
+        self.spiderMovement.append(Position(x, y, z))
 
     def get(self, second):
         if second > len(self.spiderMovement):
@@ -38,6 +41,8 @@ class SpaceAndTime:
             return self.spiderMovement[second]
 
     def __str__(self):
+        #Returning this as a string returns it as a list!
+
         return self.spiderMovement
 
     def entries(self):
@@ -47,8 +52,13 @@ class SpaceAndTime:
     def getLists(self):
         x = [self.get(i).getX() for i in range(self.entries())]
         y = [self.get(i).getY() for i in range(self.entries())]
+        z = [self.get(i).getZ() for i in range(self.entries())]
+
         t = [i for i in range(self.entries())]
-        return t, x, y
+        return x, y, z, t
+    
+
+    #TODO: Jason -- graphing
 
     def draw2D(self):
         t, x, y = self.getLists()
