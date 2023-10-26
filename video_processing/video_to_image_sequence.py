@@ -14,7 +14,7 @@ class VideoToImages:
         num_frames (int): number of frames such that the video is sampled every num_frames frames.
 
         Creates new folder with name of video to hold image frames in same directory.
-        Returns None.
+        Returns name of folder.
         """
         try:
             folder_data_path = f"{self.video_file}_every_{num_frames}_frames" # create new folder associated with video name
@@ -36,6 +36,8 @@ class VideoToImages:
             cv2.imwrite(new_image_name, image_frame) # write the new image to the specified folder
 
             frame_counter += 1
+        
+        return folder_data_path
     
 
 

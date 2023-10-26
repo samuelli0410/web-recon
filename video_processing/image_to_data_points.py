@@ -1,4 +1,3 @@
-from video_to_image_sequence import VideoToImages
 from web_simulator.web import Point3D
 import numpy as np
 import cv2
