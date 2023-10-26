@@ -2,11 +2,8 @@ import cv2
 import os
 
 
-
 class VideoToImages:
-    """
-    Class which contains functionalities to transform saved MP4 video to sequence of image frames.
-    """
+    """Class which contains functionalities to transform saved MP4 video to sequence of image frames."""
     def __init__(self, video_file: str) -> None:
         self.video_file = video_file
         self.recorder = cv2.VideoCapture(video_file)
@@ -41,7 +38,7 @@ class VideoToImages:
             frame_counter += 1
     
 
-    
+
         
 
 
