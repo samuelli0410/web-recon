@@ -17,8 +17,8 @@ class VideoToImages:
         Returns None.
         """
         try:
-            folder_data_path = f"{self.video_file}_every_{num_frames}_frames"
-            if not os.path.exists(folder_data_path):
+            folder_data_path = f"{self.video_file}_every_{num_frames}_frames" # create new folder associated with video name
+            if not os.path.exists(folder_data_path): # if already exists, go to next step
                 os.makedirs(folder_data_path)
         
         except:
@@ -27,13 +27,13 @@ class VideoToImages:
         frame_counter = 0
         while True:
             for _ in range(num_frames):
-                able_to_read, image_frame = self.recorder.read()
+                able_to_read, image_frame = self.recorder.read() # skip over num_frames frames
             
-            if not able_to_read:
+            if not able_to_read: # if end of video reached, exit loop
                 break;
 
-            new_image_name = f"./{folder_data_path}/{frame_counter}_image"
-            cv2.imwrite(new_image_name, image_frame)
+            new_image_name = f"./{folder_data_path}/{frame_counter}_image" # create new numbered image name in new folder
+            cv2.imwrite(new_image_name, image_frame) # write the new image to the specified folder
 
             frame_counter += 1
     
