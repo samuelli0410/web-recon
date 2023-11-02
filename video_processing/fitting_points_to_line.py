@@ -25,4 +25,41 @@ class CollinearPointsFitting:
                     self.index_graph.add_edge(i_key, j_key)
 
     
+    def merge_close_vertices(self, max_distance: float):
+        """Vertices that have two edges of length max_distance or less are eliminated, and the two edges are merged into one.
+        
+        max_distance (float): the max pythagorean distacne that two edges can be to be merged. Recommended to be very small.
+
+        Returns None.
+        """
+        for index in self.index_to_point.keys():
+            neighbors = self.index_graph.neighbors(index)
+            if len(neighbors) == 2:
+                index_1 = neighbors[0]
+                index_2 = neighbors[1]
+
+                point = self.index_to_point[index]
+                neighbor_1 = self.index_to_point[index_1]
+                neighbor_2 = self.index_to_point[index_2]
+                if point.dist(neighbor_1) <= max_distance and point.dist(neighbor_2) <= max_distance and self.collinear_within_n(0.0174533, point, neighbor_1, neighbor_2):
+                    self.index_graph.add_edge(index_1, index_2)
+                    self.index_graph.delete_edges([index, index_1], [index_1, index], [index, index_2], [index_2, index])
+                
     
+    def collinear_within_n(n_radians: float, point_1: Point3D, point_2: Point3D, point_3: Point3D):
+        """Determines whether the given three points are collinear to each other, within a error margin of n_radians.
+        
+        n_degrees (float): the max possible deviation from the line formed by the three points, in radians.
+        point_1 (Point3D): first point to be considered.
+        point_2 (Point3D): second point to be considered.
+        point_3 (Point3D): third point to be considered.
+
+        Returns (bool) whether the three points are collinear within n_radians.
+        """
+        vector_1 = [point_1.x - point_2.x, point_1.y - point_2.y, point_1.z - point_2.z]
+        vector_2 = [point_1.x - point_3.x, point_1.y - point_3.y, point_1.z - point_3.z]
+
+        angle_between_vectors = np.arccos(np.clip(np.dot(vector_1, vector_2) / (np.linalg.norm(vector_1) * np.linalg.norm(vector_2)), -1, 1))
+
+        return abs(angle_between_vectors - 180) <= n_radians
+        
