@@ -42,8 +42,9 @@ class CollinearPointsFitting:
                 neighbor_1 = self.index_to_point[index_1]
                 neighbor_2 = self.index_to_point[index_2]
                 if point.dist(neighbor_1) <= max_distance and point.dist(neighbor_2) <= max_distance and self.collinear_within_n(0.0174533, point, neighbor_1, neighbor_2):
-                    self.index_graph.add_edge(index_1, index_2)
-                    self.index_graph.delete_edges([index, index_1], [index_1, index], [index, index_2], [index_2, index])
+                    self.index_graph.add_edge(index_1, index_2) # add new edge between neighbors
+                    self.index_to_point.pop(index) # remove original point from map
+                    self.index_graph.delete_vertices(index) # remove original vertex from graph
                 
     
     def collinear_within_n(n_radians: float, point_1: Point3D, point_2: Point3D, point_3: Point3D):
@@ -56,10 +57,12 @@ class CollinearPointsFitting:
 
         Returns (bool) whether the three points are collinear within n_radians.
         """
+        # two vectors formed by the three points
         vector_1 = [point_1.x - point_2.x, point_1.y - point_2.y, point_1.z - point_2.z]
         vector_2 = [point_1.x - point_3.x, point_1.y - point_3.y, point_1.z - point_3.z]
 
+        # angle calculated using: <v1, v2> / (||v1||*||v2||) with np.clip to remove extreme values
         angle_between_vectors = np.arccos(np.clip(np.dot(vector_1, vector_2) / (np.linalg.norm(vector_1) * np.linalg.norm(vector_2)), -1, 1))
 
-        return abs(angle_between_vectors - 180) <= n_radians
+        return abs(angle_between_vectors - np.pi) <= n_radians # return whether the deviation from 0/pi is within n_radians
         
