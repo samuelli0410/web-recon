@@ -10,7 +10,7 @@ import time
 s3_client = boto3.client('s3')
 
 # Replace with your S3 bucket name
-bucket_name = 'spider-video'
+bucket_name = 'spider-videos'
 
 class UploadEventHandler(FileSystemEventHandler):
     def on_created(self, event):
