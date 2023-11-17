@@ -1,7 +1,6 @@
-from web_simulator.web import Point3D
+from web_simulator.web import *
 import numpy as np
 import cv2
-from huggingface_hub import from_pretrained_keras
 import os
 
 
@@ -16,7 +15,6 @@ class PointGenerator:
 
     def __init__(self, image_folder: str) -> None:
         self.image_folder = image_folder
-        self.model = from_pretrained_keras("keras-io/deeplabv3p-resnet50")
 
 
     def find_points(self, image: cv2.Mat):
@@ -43,10 +41,12 @@ class PointGenerator:
 
         for time, frame in enumerate(os.listdir(self.image_folder)): # iterate through each image in the folder, new time value for each
             # read the image and find the xy points in the slice, then add the estimated z coordinate from time / depth
-            curr = [Point3D(x_coord / PointGenerator.CONTAINER_LENGTH, 
-                            y_coord / PointGenerator.CONTAINER_HEIGHT, 
-                            time / PointGenerator.CONTAINER_DEPTH) for x_coord, y_coord in self.find_points(cv2.imread(frame))]
-            all_points.extend(curr) # add to total points
+            img = cv2.imread(self.image_folder + frame)
+            if img is not None:
+                curr = [Point3D(x_coord / PointGenerator.CONTAINER_LENGTH, 
+                                y_coord / PointGenerator.CONTAINER_HEIGHT, 
+                                time / PointGenerator.CONTAINER_DEPTH) for x_coord, y_coord in self.find_points(img)]
+                all_points.extend(curr) # add to total points
 
         return all_points # return as list of (x, y, z) Point3D objects
         
