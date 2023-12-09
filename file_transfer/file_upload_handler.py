@@ -1,4 +1,4 @@
-"""Courtesy of ChatGPT"""
+"""Inspired by ChatGPT"""
 
 import boto3
 import os
@@ -17,24 +17,44 @@ s3_client = boto3.client('s3')
 # Replace with your S3 bucket name
 bucket_name = 'spider-videos'
 
+
+# Set video length (seconds)
+video_length = 20
+
+# Set waiting time (seconds)
+wait_time = 5
+
+
+
+
+
+
+processed_files = set()
+
 class UploadEventHandler(FileSystemEventHandler):
     def __init__(self, upload_queue) -> None:
         super(UploadEventHandler, self).__init__()
         self.upload_queue = upload_queue
 
     def on_created(self, event):
-        print(f"Detected new file: {event.src_path}")
-        if not event.is_directory and event.src_path.lower().endswith(".mp4"):
+        if not event.is_directory and event.src_path.lower().endswith(".mp4") and event.src_path not in processed_files:
+            processed_files.add(event.src_path)
+            print(f"Detected new file: {event.src_path}")
             self.upload_queue.put(event.src_path)
             print("Adding to queue...")
+            print("Queue state:", self.upload_queue.queue)
 
 def upload_worker(upload_queue):
-    while True:
+    while not shutdown_flag.is_set():
         file_path = upload_queue.get()
         if file_path is None:
             break
-        upload_file(file_path)
-        upload_queue.task_done()
+        try:
+            upload_file(file_path)
+        except Exception:
+            print("Error uploading.")
+        finally:
+            upload_queue.task_done()
 
 
 def upload_file(file_path):
@@ -77,8 +97,9 @@ def is_file_stable(file_path, wait_time=2, retries=3):
             return True
         
         time.sleep(wait_time)
-        
 
+
+shutdown_flag = threading.Event()
 
 # Set up the observer
 path = os.path.expanduser('~/Videos')
@@ -99,29 +120,27 @@ uploader_thread.start()
 print(f'Monitoring folder {path} for new video files...')
 recording_begin_time = time.time()
 
-# Set video length
-video_length = 30 
-
 try:
     while True:
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
         time.sleep(1)
-        pyautogui.keyDown('ctrl')
-        time.sleep(0.5)
-        pyautogui.keyDown('f11')
-        time.sleep(0.5)
-        pyautogui.keyUp('ctrl')
-        pyautogui.keyUp('f11')
+        pyautogui.hotkey('ctrl', 'f11', interval=0.1)
         time.sleep(video_length)
-        pyautogui.keyDown('ctrl')
-        time.sleep(0.5)
-        pyautogui.keyDown('f12')
-        time.sleep(0.5)
-        pyautogui.keyUp('ctrl')
-        pyautogui.keyUp('f12')
-        time.sleep(10)
+        pyautogui.hotkey('ctrl', 'f12', interval=0.1)
+        time.sleep(wait_time)
+
+
 except KeyboardInterrupt:
+    print("KEYBOARD INTERRUPT; FINALIZING UPLOADS...")
+    pyautogui.hotkey('ctrl', 'f12', interval=0.1)
+    shutdown_flag.set()
     upload_queue.put(None)
+
+finally:
     uploader_thread.join()
     observer.stop()
     observer.join()
+    print("Processes stopped.")
+
+
+
