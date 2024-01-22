@@ -108,7 +108,7 @@ event_handler = UploadEventHandler(upload_queue)
 observer = Observer()
 observer.schedule(event_handler, path, recursive=False)
 
-time.sleep(5)
+time.sleep(wait_time)
 
 # Start the observer
 observer.start()
