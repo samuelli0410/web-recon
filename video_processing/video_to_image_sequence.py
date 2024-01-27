@@ -30,7 +30,7 @@ class VideoToImages:
                 able_to_read, image_frame = self.recorder.read() # skip over num_frames frames
             
             if not able_to_read: # if end of video reached, exit loop
-                break;
+                break
 
             new_image_name = f"./{folder_data_path}/{frame_counter}_image" # create new numbered image name in new folder
             cv2.imwrite(new_image_name, image_frame) # write the new image to the specified folder
@@ -40,6 +40,10 @@ class VideoToImages:
         return folder_data_path
     
 
+if __name__ == "__main__":
+    file_name = "2024-01-27 15-15-18.mp4"
+    converter = VideoToImages(os.path.expanduser(f"~/Downloads/{file_name}"))
+    converter.generate_every_n_frames(5)
 
         
 

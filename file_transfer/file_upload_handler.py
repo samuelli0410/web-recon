@@ -19,7 +19,7 @@ bucket_name = 'spider-videos'
 
 
 # Set video length (seconds)
-video_length = 20
+video_length = 15
 
 # Set waiting time (seconds)
 wait_time = 5
@@ -123,10 +123,11 @@ recording_begin_time = time.time()
 try:
     while True:
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
-        time.sleep(1)
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
+        print("Video recording start.")
         time.sleep(video_length)
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
+        print("Video recording end.")
         time.sleep(wait_time)
 
 
