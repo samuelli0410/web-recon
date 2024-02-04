@@ -3,6 +3,7 @@ import numpy as np
 import open3d as o3d
 from concurrent.futures import ProcessPoolExecutor
 import os
+import time
 
 def process_frame_gpu(frame_data):
     frame, frame_count, depth_scale = frame_data
@@ -99,8 +100,11 @@ def process_frame_grey(frame_data):
 
     # Convert to binary image using a normalized threshold of 0.75
     max_pixel_value = np.max(contrast_enhanced)
-    threshold_value = max_pixel_value * 0.75
+    threshold_value = max_pixel_value * 0.5
     _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
+
+    #cv2.imshow("s", binary_image)
+    #cv2.waitKey(0)
 
     # Find bright points
     ys, xs = np.where(binary_image == 255)
@@ -149,4 +153,4 @@ def create_and_visualize_point_cloud(video_path, depth_scale):
         print("No points were added to the point cloud. Check the frame processing logic.")
 
 if __name__ == '__main__':
-    create_and_visualize_point_cloud(os.path.expanduser("~/Downloads/2024-01-27_15-46-18 (online-video-cutter.com) (1).mp4"), 1)
+    create_and_visualize_point_cloud(os.path.expanduser("~/Downloads/2024-02-03 17-36-40.mp4"), 1)
