@@ -80,27 +80,22 @@ def process_frame_grey(frame_data):
     frame, frame_count, depth_scale = frame_data
     print(f"Processing frame {frame_count}")
 
-    # Define the percentage of the image to keep (e.g., 90%)
-    keep_percentage = 90
+    # Split the frame into RGB channels
+    blue_channel, green_channel, red_channel = cv2.split(frame)
 
-    # Get the height of the frame
-    height, _ = frame.shape[:2]
+    # Apply noise reduction or other processing to the green channel
+    # For example, you can apply Gaussian blur to the green channel
+    green_channel = cv2.GaussianBlur(green_channel, (0, 0), sigmaX=1)
 
-    # Calculate the number of rows to keep based on the percentage
-    rows_to_keep = int(keep_percentage / 100 * height)
+    # Merge the processed channels back into an RGB frame
+    processed_frame = cv2.merge([blue_channel, green_channel, red_channel])
 
-    # Crop the frame to keep only the upper portion
-    cropped_frame = frame[:rows_to_keep, :]
-
-    # Convert the cropped frame to grayscale
-    grayscale_frame = cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2GRAY)
-
-    # Apply Gaussian blur with std deviation 1
-    blurred_frame = cv2.GaussianBlur(grayscale_frame, (0, 0), sigmaX=1)
+    # Convert the processed frame to grayscale
+    grayscale_frame = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2GRAY)
 
     # Enhance contrast selectively using CLAHE
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    contrast_enhanced = clahe.apply(blurred_frame)
+    contrast_enhanced = clahe.apply(grayscale_frame)
 
     # Convert to binary image using a normalized threshold of 0.75
     max_pixel_value = np.max(contrast_enhanced)
@@ -110,7 +105,7 @@ def process_frame_grey(frame_data):
     # Find bright points
     ys, xs = np.where(binary_image == 255)
     points = [[x, y, frame_count * depth_scale] for x, y in zip(xs, ys)]
-    
+
     return points
 
 def create_and_visualize_point_cloud(video_path, depth_scale):
