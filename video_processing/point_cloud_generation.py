@@ -1,12 +1,14 @@
-import os
+import argparse
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
 import open3d as o3d
 
 
-def process_frame_gpu(frame_data):
+def process_frame_gpu(frame_data) -> List[Tuple]:
     frame, frame_count, depth_scale = frame_data
     # Ensure OpenCV is configured with CUDA support
     if not cv2.cuda.getCudaEnabledDeviceCount():
@@ -40,7 +42,7 @@ def process_frame_gpu(frame_data):
 
     # Find bright points
     ys, xs = np.where(binary_image == 255)
-    points = [[x, y, frame_count * depth_scale] for x, y in zip(xs, ys)]
+    points = [(x, y, frame_count * depth_scale) for x, y in zip(xs, ys)]
     
     return points
 
@@ -74,7 +76,7 @@ def process_frame(frame_data):
 
     # Find bright points
     ys, xs = np.where(binary_image == 255)
-    points = [[x, y, frame_count * depth_scale] for x, y in zip(xs, ys)]
+    points = [(x, y, frame_count * depth_scale) for x, y in zip(xs, ys)]
     
     return points
 
@@ -109,11 +111,11 @@ def process_frame_grey(frame_data):
 
     # Find bright points
     ys, xs = np.where(binary_image == 255)
-    points = [[x, y, frame_count * depth_scale] for x, y in zip(xs, ys)]
+    points = [(x, y, frame_count * depth_scale) for x, y in zip(xs, ys)]
 
     return points
 
-def create_and_visualize_point_cloud(video_path, depth_scale):
+def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], depth_scale) -> None:
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error: Could not open video.")
@@ -146,12 +148,25 @@ def create_and_visualize_point_cloud(video_path, depth_scale):
         if points_np.ndim == 2 and points_np.shape[1] == 3:
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(points_np)
-            o3d.io.write_point_cloud("test_web.pcd", pcd)
+            # o3d.io.write_point_cloud(f"{file_name}.pcd", pcd)
+            video_name = Path(video_path).stem
+            if dst_dir is None: # save to the same directory as video
+                file_name = str(Path(video_path).parent / f"{video_name}.pcd")
+            else:
+                dst_dir = Path(dst_dir)
+                dst_dir.mkdir(exist_ok=True)
+                file_name = str(dst_dir / f"{video_name}.pcd")
+            o3d.io.write_point_cloud(file_name, pcd)
             o3d.visualization.draw_geometries([pcd])
         else:
-            print("Error: Points array is not in the expected Nx3 shape.")
+            print("Error: Points array is not in the expected N by 3 shape.")
     else:
         print("No points were added to the point cloud. Check the frame processing logic.")
 
 if __name__ == '__main__':
-    create_and_visualize_point_cloud(os.path.expanduser("~/Downloads/2024-02-03 17-36-40.mp4"), 1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--src_file", help="Path to the source video file.")
+    parser.add_argument("--dst_dir", help="Directory to save PointCloud (.pcd) files", default=None)
+    parser.add_argument("--depth_scale", type=float, default=1.0)
+    args = parser.parse_args()
+    create_and_visualize_point_cloud(video_path=args.src_file, dst_dir=args.dst_dir, depth_scale=args.depth_scale)
