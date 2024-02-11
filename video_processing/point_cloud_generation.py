@@ -1,9 +1,10 @@
+import os
+from concurrent.futures import ProcessPoolExecutor
+
 import cv2
 import numpy as np
 import open3d as o3d
-from concurrent.futures import ProcessPoolExecutor
-import os
-import time
+
 
 def process_frame_gpu(frame_data):
     frame, frame_count, depth_scale = frame_data
