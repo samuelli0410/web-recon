@@ -25,3 +25,6 @@ python point_cloud_generation.py --src_file ./test_video.mp4
 * `src_file`: Path to the source video file.
 * `dst_dir`: Target directory to save image files. Defaults to `None` - will be saved in the same directory as source file.
 * `depth_scale`: Defaults to `1`.
+
+
+## `graph_generation.py`

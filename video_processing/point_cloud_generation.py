@@ -146,6 +146,7 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
         # Convert all_points to a NumPy array and visualize
         points_np = np.array(all_points)
         if points_np.ndim == 2 and points_np.shape[1] == 3:
+            print(f"Number of points: {points_np.shape[0]}")
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(points_np)
             # o3d.io.write_point_cloud(f"{file_name}.pcd", pcd)
