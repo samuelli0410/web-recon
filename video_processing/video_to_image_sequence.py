@@ -51,7 +51,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--src_file", help="Path to the source video file.")
     parser.add_argument("--dst_dir", help="Target directory to save image files.", default=None)
-    parser.add_argument("--n_frames", help="Number of frames such that the video is sampled every num_frames frames.", type=int, default=5)
+    parser.add_argument("--n_frames", help="Number of frames such that the video is sampled every `n_frames` frames.", type=int, default=5)
     args = parser.parse_args()
 
     converter = VideoToImages(video_file=args.src_file, dst_dir=args.dst_dir)
