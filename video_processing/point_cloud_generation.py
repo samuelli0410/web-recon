@@ -77,15 +77,31 @@ def process_frame(frame_data):
     
     return points
 
+import numpy as np
+import cv2
+
 def process_frame_grey(frame_data):
     frame, frame_count, depth_scale = frame_data
     print(f"Processing frame {frame_count}")
+
+    # Assuming the video moves away at a constant rate, calculate border width
+    # Adjust the scale factor according to the rate of moving away
+    border_width = int((324 - frame_count) * 1.4)  # Example scale factor
+
+    # Ensure border_width does not exceed frame dimensions
+    #border_width = min(border_width, frame.shape[0]//2, frame.shape[1]//2)
+
+    # Set pixel values on the border to 0
+    if border_width > 0:
+        frame[:border_width, :] = 0  # Top border
+        frame[-border_width - 200:, :] = 0  # Bottom border
+        frame[:, :border_width] = 0  # Left border
+        frame[:, -border_width:] = 0  # Right border
 
     # Split the frame into RGB channels
     blue_channel, green_channel, red_channel = cv2.split(frame)
 
     # Apply noise reduction or other processing to the green channel
-    # For example, you can apply Gaussian blur to the green channel
     green_channel = cv2.GaussianBlur(green_channel, (0, 0), sigmaX=1)
 
     # Merge the processed channels back into an RGB frame
@@ -103,15 +119,11 @@ def process_frame_grey(frame_data):
     threshold_value = max_pixel_value * 0.5
     _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
 
-    #cv2.imshow("s", binary_image)
-    #cv2.waitKey(0)
-
     # Find bright points
     ys, xs = np.where(binary_image == 255)
     points = [[x, y, frame_count * depth_scale] for x, y in zip(xs, ys)]
 
     return points
-
 def create_and_visualize_point_cloud(video_path, depth_scale):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -120,13 +132,21 @@ def create_and_visualize_point_cloud(video_path, depth_scale):
 
     all_points = []
     
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    frame_count = 0
+    ignore_first_frames = 70
+    ignore_last_frames = 30
+
     with ProcessPoolExecutor() as executor:
         futures = []
-        frame_count = 0
         while True:
             ret, frame = cap.read()
             if not ret:
                 break  # No more frames to process
+            if frame_count < ignore_first_frames or frame_count >= total_frames - ignore_last_frames:
+                frame_count += 1
+                continue  
+
             # Submit each frame to be processed as soon as it's read
             future = executor.submit(process_frame_grey, (frame, frame_count, depth_scale))
             futures.append(future)
@@ -153,4 +173,4 @@ def create_and_visualize_point_cloud(video_path, depth_scale):
         print("No points were added to the point cloud. Check the frame processing logic.")
 
 if __name__ == '__main__':
-    create_and_visualize_point_cloud(os.path.expanduser("~/Downloads/2024-02-03 17-36-40.mp4"), 1)
+    create_and_visualize_point_cloud(os.path.expanduser("~/Videos/2024-02-12 19-22-23.mp4"), 2)
