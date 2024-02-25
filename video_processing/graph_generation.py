@@ -8,8 +8,7 @@ from tqdm import tqdm
 
 
 def generate_graph(file_path: str, distance_threshold: float):
-    # Load your point cloud (replace 'your_point_cloud.pcd' with the actual file path)
-    # point_cloud = o3d.io.read_point_cloud('test_web.pcd')
+    # Load your point cloud
     point_cloud = o3d.io.read_point_cloud(file_path)
 
     # Create a graph to represent the connectivity
@@ -43,10 +42,28 @@ def generate_graph(file_path: str, distance_threshold: float):
     plt.show()
 
 
+def generate_graph_2(file_path: str):
+    pcd = o3d.io.read_point_cloud(file_path)
+
+    # Assuming pcd is your Open3D point cloud object loaded from earlier
+    pcd.estimate_normals()
+
+    # Poisson surface reconstruction
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9)
+
+    # Optionally remove low density vertices
+    vertices_to_remove = densities < np.quantile(densities, 0.01)
+    mesh.remove_vertices_by_mask(vertices_to_remove)
+
+    # Visualize the mesh
+    o3d.visualization.draw_geometries([mesh])
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--src_file", help="Source pointcloud file (.pcd).")
     parser.add_argument("--threshold", help="Distance threshold for connecting close points", type=float, default=0.1)
     args = parser.parse_args()
 
-    generate_graph(file_path=args.src_file, distance_threshold=args.threshold)
+    # generate_graph(file_path=args.src_file, distance_threshold=args.threshold)
+    generate_graph_2(file_path=args.src_file)

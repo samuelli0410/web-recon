@@ -46,7 +46,7 @@ def process_frame(frame_data):
     ys, xs = np.where(binary_image == 255)
     points = [[x, y, frame_count * depth_scale] for x, y in zip(xs, ys)]
     
-    return points
+    return points   
 
 # Example usage
 if __name__ == '__main__':

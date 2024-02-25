@@ -1,5 +1,3 @@
-"""Inspired by ChatGPT"""
-
 import boto3
 import os
 from watchdog.observers import Observer
@@ -9,7 +7,7 @@ import datetime as datetime
 import pyautogui
 from queue import Queue
 import threading
-
+import serial
 
 # Initialize S3 client
 s3_client = boto3.client('s3')
@@ -19,15 +17,31 @@ bucket_name = 'spider-videos'
 
 
 # Set video length (seconds)
-video_length = 15
+video_length = 15 # redundant if determined by arduino
 
-# Set waiting time (seconds)
-wait_time = 5
+# Set waiting time (seconds) between videos
+wait_time = 10
+
+# Choose whether to delete video upon upload
+delete_video = False
+
+# Choose port Arduino is connected to
+arduino_port = "COM3"
+
+arduino = serial.Serial(arduino_port, 9600)
+time.sleep(3)
 
 
+def wait_for_arduino():
+    while True:
+        if arduino.in_waiting > 0:
+            if arduino.read() == b'd':
+                print("Arduino finished.")
+                break
 
-
-
+def send_ready_signal():
+    arduino.write(b'1')
+    print("Ready signal sent.")
 
 processed_files = set()
 
@@ -69,8 +83,9 @@ def upload_file(file_path):
         print(f'{file_name} uploaded.')
         end_time = time.time()
         print(f"Upload took {end_time - start_time} seconds to complete.")
-        print("Removing file...")
-        os.remove(file_path)
+        if delete_video:
+            print("Removing file...")
+            os.remove(file_path)
         
     except Exception as e:
         print(f"Error during upload: {e}")
@@ -108,7 +123,7 @@ event_handler = UploadEventHandler(upload_queue)
 observer = Observer()
 observer.schedule(event_handler, path, recursive=False)
 
-time.sleep(wait_time)
+#time.sleep(wait_time)
 
 # Start the observer
 observer.start()
@@ -123,9 +138,16 @@ recording_begin_time = time.time()
 try:
     while True:
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
+
+        
+
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
         print("Video recording start.")
-        time.sleep(video_length)
+
+        send_ready_signal()
+        
+        wait_for_arduino()
+
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         print("Video recording end.")
         time.sleep(wait_time)
