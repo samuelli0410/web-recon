@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+boto3 = "*"
+watchdog = "*"
+pyautogui = "*"
+numpy = "*"
+igraph = "*"
+networkx = "*"
+open3d = "*"
+matplotlib = "*"
+opencv-python = "*"
+seaborn = "*"
+tqdm = "*"
+cython = "*"
+scipy = "*"
+
+[dev-packages]
+
+[scripts]

@@ -1,7 +1,10 @@
-from web_simulator.web import *
-import numpy as np
-import cv2
 import os
+from typing import List, Tuple
+
+import cv2
+import numpy as np
+
+from web_simulator.web import *
 
 
 class PointGenerator:
@@ -16,8 +19,7 @@ class PointGenerator:
     def __init__(self, image_folder: str) -> None:
         self.image_folder = image_folder
 
-
-    def find_points(self, image: cv2.Mat):
+    def find_points(self, image: cv2.Mat) -> List[Tuple[int, int]]:
         """Locates bright (greater or equal to MIN_BRIGHTNESS) pixels in the image and converts them to a list of Point3D points.
             
         image (cv2.Mat): image object returned from imread
@@ -28,9 +30,8 @@ class PointGenerator:
         brightest_points = np.where(brightness_values >= PointGenerator.MIN_BRIGHTNESS) # identify coordinates >= to min brightness
 
         return list(zip(brightest_points[1], brightest_points[0])) # return as list of (x, y) pairs
-    
 
-    def process_folder(self):
+    def process_folder(self) -> List[Point3D]:
         """Iterates through the image folder of this object, finding the points in each image and adding a time (z) coordinate to each.
         The z coordinate is defined as time (image_number) divided by predefined container depth. Using a different number of frames 
         will require adjustments to the time variable.
@@ -49,4 +50,3 @@ class PointGenerator:
                 all_points.extend(curr) # add to total points
 
         return all_points # return as list of (x, y, z) Point3D objects
-        

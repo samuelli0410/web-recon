@@ -1,20 +1,69 @@
+import argparse
+
+import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import open3d as o3d
-import networkx as nx
-import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
-pcd = o3d.io.read_point_cloud('test_web.pcd')
+def generate_graph(file_path: str, distance_threshold: float):
+    # Load your point cloud
+    point_cloud = o3d.io.read_point_cloud(file_path)
 
-# Assuming pcd is your Open3D point cloud object loaded from earlier
-pcd.estimate_normals()
+    # Create a graph to represent the connectivity
+    graph = nx.Graph()
 
-# Poisson surface reconstruction
-mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9)
+    # Get the XYZ coordinates of the points in the point cloud
+    points_xyz = np.asarray(point_cloud.points)
 
-# Optionally remove low density vertices
-vertices_to_remove = densities < np.quantile(densities, 0.01)
-mesh.remove_vertices_by_mask(vertices_to_remove)
+    # Iterate through the points to connect close points
+    num_points = points_xyz.shape[0]
+    print(f"Number of points: {num_points}")
 
-# Visualize the mesh
-o3d.visualization.draw_geometries([mesh])
+    # Sort points lexicographically
+    # https://stackoverflow.com/questions/38277143/sort-2d-numpy-array-lexicographically
+    points_xyz = points_xyz[np.lexsort(points_xyz.T[::-1])]
+    for i in tqdm(range(num_points)):
+        for j in tqdm(range(i + 1, num_points), leave=False):
+            point1 = points_xyz[i]
+            point2 = points_xyz[j]
+            # Calculate the Euclidean distance between point1 and point2
+            distance = np.linalg.norm(point1 - point2)
+            if distance <= distance_threshold:
+                # Add an edge to connect the close points in the graph
+                graph.add_edge(tuple(point1), tuple(point2))
+            elif point2[0] - point1[0] > distance_threshold: # Break inner loop, since it is lexicographically sorted
+                break
+
+    # Visualize the graph
+    pos = nx.spring_layout(graph)  # You can choose a different layout algorithm
+    nx.draw(graph, pos, node_size=10, font_size=6)
+    plt.show()
+
+
+def generate_graph_2(file_path: str):
+    pcd = o3d.io.read_point_cloud(file_path)
+
+    # Assuming pcd is your Open3D point cloud object loaded from earlier
+    pcd.estimate_normals()
+
+    # Poisson surface reconstruction
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9)
+
+    # Optionally remove low density vertices
+    vertices_to_remove = densities < np.quantile(densities, 0.01)
+    mesh.remove_vertices_by_mask(vertices_to_remove)
+
+    # Visualize the mesh
+    o3d.visualization.draw_geometries([mesh])
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--src_file", help="Source pointcloud file (.pcd).")
+    parser.add_argument("--threshold", help="Distance threshold for connecting close points", type=float, default=0.1)
+    args = parser.parse_args()
+
+    # generate_graph(file_path=args.src_file, distance_threshold=args.threshold)
+    generate_graph_2(file_path=args.src_file)

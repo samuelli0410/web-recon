@@ -1,13 +1,14 @@
 import numpy as np
 import igraph as ig
 from web_simulator.web import *
+from typing import Dict, List
 
 
 class CollinearPointsFitting:
     """Class which takes in a list of 3D points and creates a graph of their connections."""
-    def __init__(self, list_of_points: list) -> None:
-        self.index_graph = ig.Graph(n=len(list_of_points))
-        self.index_to_point = {}
+    def __init__(self, list_of_points: List[Point3D]) -> None:
+        self.index_graph: ig.Graph = ig.Graph(n=len(list_of_points))
+        self.index_to_point: Dict[int, Point3D] = {}
         for index, point in enumerate(list_of_points):
             self.index_to_point[index] = point
 
@@ -19,8 +20,8 @@ class CollinearPointsFitting:
 
         Returns None.
         """
-        for i_key, i_val in self.index_to_point.values():
-            for j_key, j_val in self.index_to_point.values():
+        for i_key, i_val in self.index_to_point.items():
+            for j_key, j_val in self.index_to_point.items():
                 if i_val.dist(j_val) <= max_distance:
                     self.index_graph.add_edge(i_key, j_key)
 
@@ -47,7 +48,7 @@ class CollinearPointsFitting:
                     self.index_graph.delete_vertices(index) # remove original vertex from graph
                 
     
-    def collinear_within_n(n_radians: float, point_1: Point3D, point_2: Point3D, point_3: Point3D):
+    def collinear_within_n(n_radians: float, point_1: Point3D, point_2: Point3D, point_3: Point3D) -> bool:
         """Determines whether the given three points are collinear to each other, within a error margin of n_radians.
         
         n_degrees (float): the max possible deviation from the line formed by the three points, in radians.
@@ -64,5 +65,5 @@ class CollinearPointsFitting:
         # angle calculated using: <v1, v2> / (||v1||*||v2||) with np.clip to remove extreme values
         angle_between_vectors = np.arccos(np.clip(np.dot(vector_1, vector_2) / (np.linalg.norm(vector_1) * np.linalg.norm(vector_2)), -1, 1))
 
-        return abs(angle_between_vectors - np.pi) <= n_radians # return whether the deviation from 0/pi is within n_radians
-        
+        is_colinear = abs(angle_between_vectors) <= n_radians or abs(angle_between_vectors - np.pi) <= n_radians
+        return is_colinear
