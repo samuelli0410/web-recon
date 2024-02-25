@@ -119,29 +119,6 @@ class VideoToImages:
         print("first", first_x_min, first_x_max, first_y_min, first_y_max)
         print("last", last_x_min, last_x_max, last_y_min, last_y_max)
         
-
-        # # fixed
-        # first_x_min = int((1 / 10) * orig_w)
-        # first_x_max = int((9 / 10) * orig_w)
-        # first_y_min = 0
-        # first_y_max = int((2.9 / 3.9) * orig_h)
-
-        # last_x_min = int((1 / 20) * orig_w)
-        # last_x_max = int((19 / 20) * orig_w)
-        # last_y_min = 0
-        # last_y_max = int((3.1 / 4.1) * orig_h)
-
-        # # no crop
-        # first_x_min = 0
-        # first_x_max = orig_w - 1
-        # first_y_min = 0
-        # first_y_max = orig_h - 1
-
-        # last_x_min = 0
-        # last_x_max = orig_w - 1
-        # last_y_min = 0
-        # last_y_max = orig_h - 1
-        
         print(f"original shape: H={orig_h}, W={orig_w}")
         for i in tqdm(range(frame_counter), desc="remove edges"):
             img_path = str(dst_dir / f"{i}_image.png")
@@ -152,25 +129,6 @@ class VideoToImages:
             y_max = linear_interpolate_int(i, frame_counter, first_y_max, last_y_max)
             new_img = self.crop_and_resize(orig_img, x_min, x_max, y_min, y_max)
             cv2.imwrite(img_path, new_img)
-            # if i == 0:
-            #     new_img[first_y_min, :, :] = 255
-            #     new_img[first_y_max, :, :] = 255
-            #     new_img[:, first_x_min, :] = 255
-            #     new_img[:, first_x_max, :] = 255
-
-            #     # new_img[30: 40, :, 0] = 255
-            #     # new_img[30: 40, :, 1] = 255
-            #     # new_img[30: 40, :, 2] = 255
-            #     cv2.imwrite(img_path, new_img)
-
-            # if i == frame_counter - 1:
-            #     new_img[last_y_min, :, :] = 255
-            #     new_img[last_y_max, :, :] = 255
-            #     new_img[:, last_x_min, :] = 255
-            #     new_img[:, last_x_max, :] = 255
-            #     cv2.imwrite(img_path, new_img)
-
-
 
         # return the directory where images are saved
         return str(dst_dir)
