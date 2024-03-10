@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 
 import cv2
 import numpy as np
+from skimage.morphology import skeletonize
 from tqdm import tqdm
 
 
@@ -75,6 +76,19 @@ class VideoToImages:
         
         return x_min, x_max, y_min, y_max
 
+    def sharpen_edges(self, img: np.ndarray) -> np.ndarray:
+        """Sharpening edges by applying Canny edge detection and skeletonize.
+
+        Returns:
+            np.ndarray: New image with sharpened edges. Black and white.
+        """
+        img[0] = 0
+        img[1] = 0
+        avg_val = img.sum() / (img.shape[0] * img.shape[1])
+        img = cv2.Canny(img, avg_val * 0.9, 255)
+        img = skeletonize(img, method="lee")
+        return img
+
     def generate_every_n_frames(self, num_frames: int) -> str:
         """Converts this video to a series of images with one frame for every n frames in the video.
 
@@ -122,13 +136,14 @@ class VideoToImages:
         print(f"original shape: H={orig_h}, W={orig_w}")
         for i in tqdm(range(frame_counter), desc="remove edges"):
             img_path = str(dst_dir / f"{i}_image.png")
-            orig_img = cv2.imread(img_path)
+            img = cv2.imread(img_path)
             x_min = linear_interpolate_int(i, frame_counter, first_x_min, last_x_min)
             x_max = linear_interpolate_int(i, frame_counter, first_x_max, last_x_max)
             y_min = linear_interpolate_int(i, frame_counter, first_y_min, last_y_min)
             y_max = linear_interpolate_int(i, frame_counter, first_y_max, last_y_max)
-            new_img = self.crop_and_resize(orig_img, x_min, x_max, y_min, y_max)
-            cv2.imwrite(img_path, new_img)
+            img = self.crop_and_resize(img, x_min, x_max, y_min, y_max)
+            img = self.sharpen_edges(img)
+            cv2.imwrite(img_path, img)
 
         # return the directory where images are saved
         return str(dst_dir)
