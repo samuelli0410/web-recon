@@ -2,86 +2,12 @@ import argparse
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import List, Optional, Tuple
+import os
 
 import cv2
 import numpy as np
 import open3d as o3d
 
-
-def process_frame_gpu(frame_data) -> List[Tuple]:
-    frame, frame_count, depth_scale = frame_data
-    # Ensure OpenCV is configured with CUDA support
-    if not cv2.cuda.getCudaEnabledDeviceCount():
-        print("CUDA device not found")
-        return []
-
-    # Upload frame to GPU
-    gpu_frame = cv2.cuda_GpuMat()
-    gpu_frame.upload(frame)
-
-    # Split channels on GPU
-    gpu_channels = cv2.cuda.split(gpu_frame)
-
-    # Apply Gaussian blur to each channel with std deviation 1 using CUDA
-    gpu_blurred_blue = cv2.cuda.GaussianBlur(gpu_channels[0], (0, 0), 1)
-    gpu_blurred_red = cv2.cuda.GaussianBlur(gpu_channels[2], (0, 0), 1)
-
-    # Merge the minimum values of the blurred red and blue channels
-    # CUDA does not have a direct min function, so download to CPU for this step
-    blurred_blue = gpu_blurred_blue.download()
-    blurred_red = gpu_blurred_red.download()
-    min_rb_blurred = cv2.min(blurred_red, blurred_blue)
-
-    # Increase contrast using histogram equalization on CPU (no direct CUDA support in OpenCV)
-    contrast_enhanced = cv2.equalizeHist(min_rb_blurred)
-
-    # Convert to binary image using a normalized threshold of 0.75
-    max_pixel_value = np.max(contrast_enhanced)
-    threshold_value = max_pixel_value * 0.75
-    _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
-
-    # Find bright points
-    ys, xs = np.where(binary_image == 255)
-    points = [(x, y, frame_count * depth_scale) for x, y in zip(xs, ys)]
-    
-    return points
-
-
-def process_frame(frame_data):
-    frame, frame_count, depth_scale = frame_data
-    print(f"Processing frame {frame_count}")
-    blue_channel, _, red_channel = cv2.split(frame)
-    
-    # Apply Gaussian blur to each channel with std deviation 1
-    blurred_blue = cv2.GaussianBlur(blue_channel, (0, 0), sigmaX=1)
-    blurred_red = cv2.GaussianBlur(red_channel, (0, 0), sigmaX=1)
-
-    # Merge the minimum values of the blurred red and blue channels
-    min_rb_blurred = cv2.min(blurred_red, blurred_blue)
-
-    # Convert to grayscale for contrast enhancement
-    grayscale_image = cv2.cvtColor(min_rb_blurred, cv2.COLOR_BGR2GRAY)
-
-    # Enhance contrast selectively in brighter regions using CLAHE
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    contrast_enhanced = clahe.apply(grayscale_image)
-
-    # Convert to binary image using a normalized threshold of 0.75
-    max_pixel_value = np.max(contrast_enhanced)
-    threshold_value = max_pixel_value * 0.75
-    _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
-
-    cv2.imshow(f"Processed Frame {frame_count}", binary_image)
-    cv2.waitKey(0)
-
-    # Find bright points
-    ys, xs = np.where(binary_image == 255)
-    points = [(x, y, frame_count * depth_scale) for x, y in zip(xs, ys)]
-    
-    return points
-
-import numpy as np
-import cv2
 
 def process_frame_grey(frame_data):
     frame, frame_count, depth_scale = frame_data
@@ -89,10 +15,7 @@ def process_frame_grey(frame_data):
 
     # Assuming the video moves away at a constant rate, calculate border width
     # Adjust the scale factor according to the rate of moving away
-    border_width = int((324 - frame_count) * 1.4)  # Example scale factor
-
-    # Ensure border_width does not exceed frame dimensions
-    #border_width = min(border_width, frame.shape[0]//2, frame.shape[1]//2)
+    border_width = int((324 - frame_count) * depth_scale)
 
     # Set pixel values on the border to 0
     if border_width > 0:
@@ -186,9 +109,12 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
         print("No points were added to the point cloud. Check the frame processing logic.")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--src_file", help="Path to the source video file.")
-    parser.add_argument("--dst_dir", help="Directory to save PointCloud (.pcd) files", default=None)
-    parser.add_argument("--depth_scale", type=float, default=1.0)
-    args = parser.parse_args()
-    create_and_visualize_point_cloud(video_path=args.src_file, dst_dir=args.dst_dir, depth_scale=args.depth_scale)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--src_file", help="Path to the source video file.")
+    # parser.add_argument("--dst_dir", help="Directory to save PointCloud (.pcd) files", default=None)
+    # parser.add_argument("--depth_scale", type=float, default=1.0)
+    # args = parser.parse_args()
+    # create_and_visualize_point_cloud(video_path=args.src_file, dst_dir=args.dst_dir, depth_scale=args.depth_scale)
+
+    create_and_visualize_point_cloud(video_path=os.path.expanduser("~/Videos/2024-02-12 19-21-35.mp4"),
+                                     dst_dir=os.path.expanduser("~/Documents/spider-recordings"), depth_scale=1.5)
