@@ -1,5 +1,8 @@
 import tensorflow as tf
 import numpy as np
+from sklearn.model_selection import train_test_split
+import pandas as pd
+import os
 
 
 
@@ -13,7 +16,7 @@ class FrameUNet:
         # Contracting Path
         conv_relu_1 = tf.keras.layers.Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(inputs)
         conv_relu_1 = tf.keras.layers.Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(conv_relu_1)
-        pooling_1 = tf.keras.layers.MaxPooling2D((2, 2))(conv_relu_1)
+        pooling_1 = tf.keras.layers.MaxPooling2D((2, 2))(conv_relu_1) # consider average pooling
 
         conv_relu_2 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(pooling_1)
         conv_relu_2 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(conv_relu_2)
@@ -24,7 +27,7 @@ class FrameUNet:
         b = tf.keras.layers.Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(b)
 
         # Expansive Path
-        u1 = tf.keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(b)
+        u1 = tf.keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(b) # upsample
         u1 = tf.keras.layers.concatenate([u1, conv_relu_2], axis=3)
         conv_relu_3 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u1)
         conv_relu_3 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(conv_relu_3)
@@ -39,6 +42,24 @@ class FrameUNet:
 
         model = tf.keras.Model(inputs=inputs, outputs=outputs)
         return model
+    
 
+# Load training data and split into training and testing sets
+file = "placeholder"
+data = pd.read_csv(file)
 
-FrameUNet(np.array([1080, 1920, 1])).build_model()
+x = data.iloc[:, :-1]
+y = data.iloc[:, -1:]
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+# Load and train model
+image_dimensions = np.array([1080, 1920, 1])
+
+model = FrameUNet(image_dimensions).build_model()
+
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+model.fit(x_train, y_train, batch_size=32, epochs=10, validation_split=0.1)
+
+model.save("./saved_model")
