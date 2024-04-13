@@ -27,6 +27,9 @@ fewer scans. This also gives the transistors more time to cool down, which will 
 #define TIME_BETWEEN 2500  // 2.5 sec
 
 void setup() {
+
+  Serial.begin(9600); // begin serial communication
+
   pinMode(TOP_LEFT, OUTPUT);
   pinMode(TOP_RIGHT, OUTPUT);
   pinMode(BOTTOM_LEFT, OUTPUT);
@@ -59,8 +62,14 @@ void go_forward() {
 }
 void loop() {
   // feel free to add anything else that the python integration should do and/or control signals
-  go_forward();
-  go_backward();
+  if (Serial.available() > 0) {
+    if (Serial.read() == '1') {
+      go_forward();
+      Serial.write('d');
+      go_backward();
+      Serial.write('s');
+    }
+  }
 
   
 

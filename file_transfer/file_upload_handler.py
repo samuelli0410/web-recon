@@ -43,6 +43,13 @@ def send_ready_signal():
     arduino.write(b'1')
     print("Ready signal sent.")
 
+def wait_arduino_recovery():
+    while True:
+        if arduino.in_waiting > 0:
+            if arduino.read() == b's':
+                print("Backward finished.")
+                break
+
 processed_files = set()
 
 class UploadEventHandler(FileSystemEventHandler):
@@ -150,7 +157,7 @@ try:
 
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         print("Video recording end.")
-        time.sleep(wait_time)
+        wait_arduino_recovery()
 
 
 except KeyboardInterrupt:
