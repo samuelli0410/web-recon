@@ -3,6 +3,7 @@ from typing import List, Tuple, Optional
 
 import math
 from pathlib import Path
+from PIL import Image
 
 import numpy as np
 import pandas as pd

@@ -3,5 +3,7 @@
 Pipfile.lock
 .DS_Store
 
-synthetic_web/**
+synthetic_web/
+noisy_frames/
+ideal_frames/**
 *.mp4
