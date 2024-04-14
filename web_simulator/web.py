@@ -39,9 +39,10 @@ EDGE_T = Tuple[int, int]
 EDGES_T = List[EDGE_T]
 
 class Web:
-    def __init__(self, vertices: VERTICES_T = [], edges: EDGES_T = []) -> None:
+    def __init__(self, vertices: VERTICES_T = [], edges: EDGES_T = [], name: str = "") -> None:
         self._vertices: VERTICES_T = vertices
         self._edges: EDGES_T = edges
+        self.name = name
 
     @property
     def vertices(self) -> VERTICES_T:
@@ -312,5 +313,5 @@ class Web:
             )  # remove all the margins outside frame
 
             # save
-            path_i = save_dir / f"{i}.png"
+            path_i = save_dir / f"{self.name}_{i}.png"
             fig.savefig(path_i)

@@ -54,6 +54,7 @@ def sample_edges(vertices: VERTICES_T, threshold_min: float = 1.0, threshold_max
 
 
 def sample_web(
+    name: str,
     func: Callable,
     x_len: float,
     y_len: float,
@@ -64,4 +65,4 @@ def sample_web(
 ) -> Web:
     vertices = sample_vertices(func, x_len, y_len, N, epsilon)
     edges = sample_edges(vertices, threshold_min, threshold_max)
-    return Web(vertices, edges)
+    return Web(vertices, edges, name)
