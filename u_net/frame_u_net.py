@@ -45,11 +45,23 @@ class FrameUNet:
     
 
 # Load training data and split into training and testing sets
-file = "placeholder"
-data = pd.read_csv(file)
+noisy_images = "./web_simulator/noisy_frames"
+ideal_images = "./web_simulator/ideal_frames"
 
-x = data.iloc[:, :-1]
-y = data.iloc[:, -1:]
+x = []
+y = []
+
+for file in os.listdir(noisy_images):
+    arr = np.load(os.path.join(noisy_images, file))
+    x.append(arr[np.newaxis, :, :, np.newaxis])  # Add new axis for batch and channel
+
+for file in os.listdir(ideal_images):
+    arr = np.load(os.path.join(ideal_images, file))
+    y.append(arr[np.newaxis, :, :, np.newaxis])  # Same as above
+
+# Convert lists to numpy arrays and ensure they are of float type for model compatibility
+x = np.vstack(x).astype(np.float32)
+y = np.vstack(y).astype(np.float32)
 
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
