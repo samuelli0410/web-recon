@@ -5,6 +5,7 @@ import igraph as ig
 import plotly.graph_objects as go
 import time
 import os
+from sklearn.cluster import DBSCAN
 
 
 
@@ -12,7 +13,16 @@ pcd = o3d.io.read_point_cloud(os.path.expanduser("~/Documents/spider-recordings/
 
 points = np.asarray(pcd.points)
 
+dbscan = DBSCAN(eps=2.1, min_samples=1)  # min_samples is set to 1 for merging all close points
+clusters = dbscan.fit_predict(points)
 
+merged_points = []
+for cluster in set(clusters):
+    members = points[clusters == cluster]
+    mean_point = np.mean(members, axis=0)
+    merged_points.append(mean_point)
+
+points = np.array(merged_points)
 
 def adaptive_threshold_connect(points: np.ndarray, base_threshold: float, density_factor: float, num_neighbors: int):
 
@@ -27,7 +37,7 @@ def adaptive_threshold_connect(points: np.ndarray, base_threshold: float, densit
         # determine thresholds for local regions
         distances, indices = tree.query(point, k=num_neighbors)
         local_threshold = np.mean(distances) * density_factor
-        #thresholds[i] = local_threshold
+        thresholds[i] = local_threshold
 
         # determine edges
         neighbors = tree.query_ball_point(point, r=thresholds[i])
@@ -44,7 +54,7 @@ def adaptive_threshold_connect(points: np.ndarray, base_threshold: float, densit
 
 
 start_time = time.time()
-g = adaptive_threshold_connect(points=points, base_threshold=35.0, density_factor=1.5, num_neighbors=7)
+g = adaptive_threshold_connect(points=points, base_threshold=25.0, density_factor=1.0, num_neighbors=6)
 end_time = time.time()
 
 print(f"Edge connection took {end_time - start_time} to complete.")
