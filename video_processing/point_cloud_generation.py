@@ -13,16 +13,16 @@ def process_frame_grey(frame_data):
     frame, frame_count, depth_scale = frame_data
     print(f"Processing frame {frame_count}")
 
-    # Assuming the video moves away at a constant rate, calculate border width
-    # Adjust the scale factor according to the rate of moving away
-    border_width = int((324 - frame_count) * depth_scale)
+    # # Assuming the video moves away at a constant rate, calculate border width
+    # # Adjust the scale factor according to the rate of moving away
+    # border_width = int((324 - frame_count) * depth_scale)
 
-    # Set pixel values on the border to 0
-    if border_width > 0:
-        frame[:border_width, :] = 0  # Top border
-        frame[-border_width - 200:, :] = 0  # Bottom border
-        frame[:, :border_width] = 0  # Left border
-        frame[:, -border_width:] = 0  # Right border
+    # # Set pixel values on the border to 0
+    # if border_width > 0:
+    #     frame[:border_width, :] = 0  # Top border
+    #     frame[-border_width - 200:, :] = 0  # Bottom border
+    #     frame[:, :border_width] = 0  # Left border
+    #     frame[:, -border_width:] = 0  # Right border
 
     # Split the frame into RGB channels
     blue_channel, green_channel, red_channel = cv2.split(frame)
@@ -37,12 +37,12 @@ def process_frame_grey(frame_data):
     grayscale_frame = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2GRAY)
 
     # Enhance contrast selectively using CLAHE
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    contrast_enhanced = clahe.apply(grayscale_frame)
-
+    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    #contrast_enhanced = clahe.apply(grayscale_frame)
+    contrast_enhanced = grayscale_frame
     # Convert to binary image using a normalized threshold of 0.75
     max_pixel_value = np.max(contrast_enhanced)
-    threshold_value = max_pixel_value * 0.5
+    threshold_value = max_pixel_value * 0.95
     _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
 
     # Find bright points
@@ -70,9 +70,9 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
             ret, frame = cap.read()
             if not ret:
                 break  # No more frames to process
-            if frame_count < ignore_first_frames or frame_count >= total_frames - ignore_last_frames:
-                frame_count += 1
-                continue  
+            # if frame_count < ignore_first_frames or frame_count >= total_frames - ignore_last_frames:
+            #     frame_count += 1
+            #     continue  
 
             # Submit each frame to be processed as soon as it's read
             future = executor.submit(process_frame_grey, (frame, frame_count, depth_scale))
@@ -116,5 +116,5 @@ if __name__ == '__main__':
     # args = parser.parse_args()
     # create_and_visualize_point_cloud(video_path=args.src_file, dst_dir=args.dst_dir, depth_scale=args.depth_scale)
 
-    create_and_visualize_point_cloud(video_path=os.path.expanduser("~/Videos/2024-02-12 19-21-35.mp4"),
-                                     dst_dir=os.path.expanduser("~/Documents/spider-recordings"), depth_scale=1.5)
+    create_and_visualize_point_cloud(video_path=os.path.expanduser("~/Downloads/2024-04-20 19-18-48.mp4"),
+                                     dst_dir=os.path.expanduser("~/Documents/spider-recordings"), depth_scale=0.4)

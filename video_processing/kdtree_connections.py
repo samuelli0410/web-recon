@@ -4,10 +4,11 @@ import open3d as o3d
 import igraph as ig
 import plotly.graph_objects as go
 import time
+import os
 
 
 
-pcd = o3d.io.read_point_cloud("test_web.pcd")
+pcd = o3d.io.read_point_cloud(os.path.expanduser("~/Documents/spider-recordings/2024-04-20 19-18-48.pcd"))
 
 points = np.asarray(pcd.points)
 
@@ -19,36 +20,37 @@ def adaptive_threshold_connect(points: np.ndarray, base_threshold: float, densit
     edges = []
     thresholds = np.full(len(points), base_threshold)
 
+    graph = ig.Graph(n=len(points))
+
 
     for i, point in enumerate(points):
         # determine thresholds for local regions
         distances, indices = tree.query(point, k=num_neighbors)
         local_threshold = np.mean(distances) * density_factor
-        thresholds[i] = local_threshold
+        #thresholds[i] = local_threshold
 
         # determine edges
         neighbors = tree.query_ball_point(point, r=thresholds[i])
         for neighbor in neighbors:
-            if neighbor != i and [i, neighbor] not in edges and [neighbor, i] not in edges:
+            if neighbor != i and [i, neighbor] not in edges and [neighbor, i] not in edges and graph.degree(i) < num_neighbors and graph.degree(neighbor) < num_neighbors:
                 edge = [i, neighbor]
                 edges.append(edge)
+                graph.add_edge(edge[0], edge[1])
                 print(edge)
 
-    
-    graph = ig.Graph(edges=edges)
 
     return graph
 
 
 
 start_time = time.time()
-g = adaptive_threshold_connect(points=points, base_threshold=10.0, density_factor=1.0, num_neighbors=10)
+g = adaptive_threshold_connect(points=points, base_threshold=35.0, density_factor=1.5, num_neighbors=7)
 end_time = time.time()
 
 print(f"Edge connection took {end_time - start_time} to complete.")
 g.summary(verbosity=1)
 
-g.write_graphml("test_graph.graphml")
+g.write_graphml("new_test_graph.graphml")
 
 
 
