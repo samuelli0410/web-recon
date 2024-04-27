@@ -18,6 +18,7 @@ tqdm = "*"
 cython = "*"
 scipy = "*"
 kaleido = "*"
+tensorflow = "*"
 
 [dev-packages]
 ipykernel = "*"
