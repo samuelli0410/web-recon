@@ -23,12 +23,8 @@ bool forward = false;
 #define ON_BACKWARD 230
 
 
-#define TIME 15000 // time per direction, 20000ms at 255 power
-#define RATIO 0.91 // which direction is stronger. <1 means forward is stronger, and will make the forward direction less time
-                  // Currently this is empirically determined but eventually we should add sensors
 
-
-/* time spent stationary before switching direction. When running this overnight, bump this up so that there are 
+/*  spent stationary before switching direction. When running this overnight, bump this up so that there are 
 fewer scans. This also gives the transistors more time to cool down, which will prevent overheating and extend circuit lifespan */
 #define TIME_BETWEEN 2500  // 2.5 sec
 
@@ -75,7 +71,7 @@ void loop() {
 
   while (1) {
     if (Serial.available() > 0) {
-    char cmd = Serial.read();  // Read once and use the value multiple times.
+    char cmd = Serial.read();  // Read once and use the value multiple s.
     if (cmd == '1' && !forward) {
       go_forward();
       forward = true;
