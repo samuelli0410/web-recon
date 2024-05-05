@@ -23,12 +23,12 @@ video_length = 15 # redundant if determined by arduino
 wait_time = 1
 
 # Choose whether to delete video upon upload
-delete_video = False
+delete_video = True
 
 # Choose port Arduino is connected to
 arduino_port = "COM3"
 
-arduino = serial.Serial(arduino_port, 9600)
+arduino = serial.Serial(arduino_port, 115200)
 time.sleep(3)
 
 
@@ -42,6 +42,10 @@ def wait_for_arduino():
 def send_ready_signal():
     arduino.write(b'1')
     print("Ready signal sent.")
+
+def send_back_signal():
+    arduino.write(b'2')
+    print("Back signal sent.")
 
 def wait_arduino_recovery():
     while True:
@@ -150,14 +154,33 @@ try:
 
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
         print("Video recording start.")
-
         send_ready_signal()
-        
-        wait_for_arduino()
-
+        line = arduino.readline().decode('utf-8').strip()
+        try:
+            distance = float(line)
+            print(f"Distance: {distance} meters")
+        except ValueError:
+            print("Invalid data received")
+        while distance <= 1.670:
+            if arduino.in_waiting > 0:
+                line = arduino.readline().decode('utf-8').strip()
+                try:
+                    distance = float(line)
+                    print(f"Distance: {distance} meters")
+                except ValueError:
+                    print("Invalid data received")
+        send_back_signal()
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         print("Video recording end.")
-        wait_arduino_recovery()
+        while distance >= 1.545:
+            if arduino.in_waiting > 0:
+                line = arduino.readline().decode('utf-8').strip()
+                try:
+                    distance = abs(float(line))
+                    print(f"Distance: {distance} meters")
+                except ValueError:
+                    print("Invalid data received")
+
 
 
 except KeyboardInterrupt:

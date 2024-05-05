@@ -6,18 +6,25 @@
     Use power cable to power breadboard with 9V.
     Plug the arduino into computer.
 */
-#define TOP_LEFT                   3
+
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(2,3);//Define software serial, 3 is TX, 2 is RX
+char buff[4]={0x80,0x06,0x03,0x77};
+unsigned char data[11]={0};
+bool forward = false;
+
+#define TOP_LEFT                   11
 #define TOP_RIGHT              5
 #define BOTTOM_LEFT               6
 #define BOTTOM_RIGHT            9
-#define LASER                   11
+
 
 #define OFF 0
-#define ON_FORWARD 255 
-#define ON_BACKWARD 255
+#define ON_FORWARD 230
+#define ON_BACKWARD 230
 
 
-#define TIME 20000 // time per direction, 20000ms at 255 power
+#define TIME 15000 // time per direction, 20000ms at 255 power
 #define RATIO 0.91 // which direction is stronger. <1 means forward is stronger, and will make the forward direction less time
                   // Currently this is empirically determined but eventually we should add sensors
 
@@ -26,53 +33,101 @@
 fewer scans. This also gives the transistors more time to cool down, which will prevent overheating and extend circuit lifespan */
 #define TIME_BETWEEN 2500  // 2.5 sec
 
-void setup() {
 
-  Serial.begin(9600); // begin serial communication
+
+
+void setup() {
+  
+  Serial.begin(115200); // begin serial communication
+  mySerial.begin(9600);
 
   pinMode(TOP_LEFT, OUTPUT);
   pinMode(TOP_RIGHT, OUTPUT);
   pinMode(BOTTOM_LEFT, OUTPUT);
   pinMode(BOTTOM_RIGHT, OUTPUT);
-  pinMode(LASER, OUTPUT);
+  // pinMode(LASER, OUTPUT);
   analogWrite(TOP_LEFT, OFF);
   analogWrite(TOP_RIGHT, OFF);
   analogWrite(BOTTOM_LEFT, OFF);
   analogWrite(BOTTOM_RIGHT, OFF);
-  digitalWrite(LASER, HIGH);
+  // digitalWrite(LASER, HIGH);
   delay(2000); // time when the laser is on but the camera is not moving, setup time and buffer to upload new code before circuit starts running
 }
 
 void go_backward() {
+  analogWrite(TOP_RIGHT, OFF);
+  analogWrite(BOTTOM_LEFT, OFF);
+  delay(20);
   analogWrite(TOP_LEFT, ON_BACKWARD);
   analogWrite(BOTTOM_RIGHT, ON_BACKWARD);
-  delay(TIME * RATIO);
-  analogWrite(TOP_LEFT, OFF);
-  analogWrite(BOTTOM_RIGHT, OFF);
-  delay(TIME_BETWEEN);
 }
 
 void go_forward() {
+  analogWrite(TOP_LEFT, OFF);
+  analogWrite(BOTTOM_RIGHT, OFF);
+  delay(20);
   analogWrite(TOP_RIGHT, ON_FORWARD);
   analogWrite(BOTTOM_LEFT, ON_FORWARD);
-  delay(TIME);
-  analogWrite(TOP_RIGHT, OFF);
-  analogWrite(BOTTOM_LEFT, OFF);
-  delay(TIME_BETWEEN);
 }
+
+
 void loop() {
-  // feel free to add anything else that the python integration should do and/or control signals
-  if (Serial.available() > 0) {
-    if (Serial.read() == '1') {
+  mySerial.print(buff);
+
+  while (1) {
+    if (Serial.available() > 0) {
+    char cmd = Serial.read();  // Read once and use the value multiple times.
+    if (cmd == '1' && !forward) {
       go_forward();
-      Serial.write('d');
+      forward = true;
+    }
+    if (cmd == '2' && forward) {
       go_backward();
-      Serial.write('s');
+      forward = false;
+    }
+    
+  }
+  
+  
+  if(mySerial.available() >= 0)//Determine whether there is data to read on the serial
+  {
+    delay(50);
+    for(int i=0;i<11;i++)
+    {
+      data[i]=mySerial.read();
+    }
+    unsigned char Check=0;
+    for(int i=0;i<10;i++)
+    {
+      Check=Check+data[i];
+    }
+    Check=~Check+1;
+    if(data[10]==Check)
+    {
+      if(data[3]=='E'&&data[4]=='R'&&data[5]=='R')
+      {
+        Serial.println("Out of range");
+      }
+      else
+      {
+        float distance=0;
+        distance=(data[3]-0x30)*100+(data[4]-0x30)*10+(data[5]-0x30)*1+(data[7]-0x30)*0.1+(data[8]-0x30)*0.01+(data[9]-0x30)*0.001;
+        Serial.println(distance, 3);
+      }
+    }
+    else
+    {
+      //Serial.println("Invalid Data!");
     }
   }
-
+  delay(20);
+  }
+  // feel free to add anything else that the python integration should do and/or control signals
   
-
-  
-
 }
+
+  
+
+  
+
+
