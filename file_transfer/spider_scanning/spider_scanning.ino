@@ -1,9 +1,8 @@
 /*  These are the pins on the arduino. Hook up TOP_LEFT to row 25 on the left side of the breadboard, oriented so that
     the top of the breadboard is row 1) TOP_RIGHT to 25 on the right side, BOTTOM_LEFT to 26 on the left side, and 
     BOTTOM_RIGHT to 26 on the right side. 
-    The two pins of the laser go into breadboard ground and arduino pin 11 (NOT 9V breadboard +).
-    Check laser polarity (red wire to + on arduino pin 11, black to gnd).
-    Use power cable to power breadboard with 9V.
+    The two pins of the laser go into a separate breadboard.
+    Use power cable to power breadboard (long one with bjts) with 9V. Red to + rail (either one) and black to the blue - rail (either one).
     Plug the arduino into computer.
 */
 
