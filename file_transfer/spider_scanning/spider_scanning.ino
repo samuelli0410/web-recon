@@ -70,6 +70,14 @@ void go_forward() {
   analogWrite(BOTTOM_LEFT, ON_FORWARD);
 }
 
+void stop_delay() {
+  analogWrite(TOP_LEFT, OFF);
+  analogWrite(TOP_RIGHT, OFF);
+  analogWrite(BOTTOM_LEFT, OFF);
+  analogWrite(BOTTOM_RIGHT, OFF);
+}
+
+bool stopped = true;
 
 void loop() {
   mySerial.print(buff);
@@ -80,10 +88,17 @@ void loop() {
     if (cmd == '1' && !forward) {
       go_forward();
       forward = true;
+      stopped = false;
     }
     if (cmd == '2' && forward) {
       go_backward();
       forward = false;
+      stopped = false;
+    }
+
+    if (cmd == '3' && !stopped) {
+      stop_delay();
+      stopped = true;
     }
     
   }

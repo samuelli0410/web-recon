@@ -47,6 +47,10 @@ def send_back_signal():
     arduino.write(b'2')
     print("Back signal sent.")
 
+def send_stop_signal():
+    arduino.write(b'3')
+    print("Stop signal sent.")
+
 def wait_arduino_recovery():
     while True:
         if arduino.in_waiting > 0:
@@ -149,7 +153,7 @@ recording_begin_time = time.time()
 try:
     while True:
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
-
+        time.sleep(120)
         
 
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
@@ -161,7 +165,7 @@ try:
             print(f"Distance: {distance} meters")
         except ValueError:
             print("Invalid data received")
-        while distance <= 1.670:
+        while distance <= 1.675:
             if arduino.in_waiting > 0:
                 line = arduino.readline().decode('utf-8').strip()
                 try:
@@ -172,7 +176,7 @@ try:
         send_back_signal()
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         print("Video recording end.")
-        while distance >= 1.545:
+        while distance >= 1.575:
             if arduino.in_waiting > 0:
                 line = arduino.readline().decode('utf-8').strip()
                 try:
@@ -180,6 +184,8 @@ try:
                     print(f"Distance: {distance} meters")
                 except ValueError:
                     print("Invalid data received")
+
+        send_stop_signal()
 
 
 
