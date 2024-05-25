@@ -1,9 +1,8 @@
 /*  These are the pins on the arduino. Hook up TOP_LEFT to row 25 on the left side of the breadboard, oriented so that
     the top of the breadboard is row 1) TOP_RIGHT to 25 on the right side, BOTTOM_LEFT to 26 on the left side, and 
     BOTTOM_RIGHT to 26 on the right side. 
-    The two pins of the laser go into breadboard ground and arduino pin 11 (NOT 9V breadboard +).
-    Check laser polarity (red wire to + on arduino pin 11, black to gnd).
-    Use power cable to power breadboard with 9V.
+    The two pins of the laser go into a separate breadboard.
+    Use power cable to power breadboard (long one with bjts) with 9V. Red to + rail (either one) and black to the blue - rail (either one).
     Plug the arduino into computer.
 */
 
@@ -24,12 +23,8 @@ bool forward = false;
 #define ON_BACKWARD 230
 
 
-#define TIME 15000 // time per direction, 20000ms at 255 power
-#define RATIO 0.91 // which direction is stronger. <1 means forward is stronger, and will make the forward direction less time
-                  // Currently this is empirically determined but eventually we should add sensors
 
-
-/* time spent stationary before switching direction. When running this overnight, bump this up so that there are 
+/*  spent stationary before switching direction. When running this overnight, bump this up so that there are 
 fewer scans. This also gives the transistors more time to cool down, which will prevent overheating and extend circuit lifespan */
 #define TIME_BETWEEN 2500  // 2.5 sec
 
@@ -84,7 +79,7 @@ void loop() {
 
   while (1) {
     if (Serial.available() > 0) {
-    char cmd = Serial.read();  // Read once and use the value multiple times.
+    char cmd = Serial.read();  // Read once and use the value multiple s.
     if (cmd == '1' && !forward) {
       go_forward();
       forward = true;
