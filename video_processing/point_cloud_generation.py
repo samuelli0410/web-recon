@@ -111,5 +111,5 @@ if __name__ == '__main__':
     # args = parser.parse_args()
     # create_and_visualize_point_cloud(video_path=args.src_file, dst_dir=args.dst_dir, depth_scale=args.depth_scale)
 
-    create_and_visualize_point_cloud(video_path=os.path.expanduser("~/Downloads/2024-05-25 17-27-41.mp4"),
+    create_and_visualize_point_cloud(video_path=os.path.expanduser("~/Downloads/2024-05-25 18-20-08.mp4"),
                                      dst_dir=os.path.expanduser("~/Documents/spider-recordings"), depth_scale=0.2)
