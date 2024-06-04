@@ -143,7 +143,7 @@ event_handler = UploadEventHandler(upload_queue)
 observer = Observer()
 observer.schedule(event_handler, path, recursive=False)
 
-executor = ThreadPoolExecutor(max_workers=5)
+#executor = ThreadPoolExecutor(max_workers=5)
 
 
 #time.sleep(wait_time)
@@ -201,7 +201,7 @@ try:
                     print("Invalid data received")
         send_stop_signal()
 
-        executor.submit(upload_file, data_file)
+        #executor.submit(upload_file, data_file)
 
         time.sleep(120)
 
