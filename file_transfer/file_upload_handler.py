@@ -143,7 +143,7 @@ event_handler = UploadEventHandler(upload_queue)
 observer = Observer()
 observer.schedule(event_handler, path, recursive=False)
 
-#executor = ThreadPoolExecutor(max_workers=5)
+executor = ThreadPoolExecutor(max_workers=5)
 
 
 #time.sleep(wait_time)
@@ -166,12 +166,14 @@ try:
         distance_info = pd.DataFrame(columns=["Time", "Distance"])
 
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
-        current_time = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = f"distance_data {current_time}.csv"
         print("Video recording start.")
         send_ready_signal()
         start_timer = time.perf_counter()
         line = arduino.readline().decode('utf-8').strip()
+        
         try:
             distance = float(line)
             print(f"Distance: {distance} meters")
@@ -201,7 +203,7 @@ try:
                     print("Invalid data received")
         send_stop_signal()
 
-        #executor.submit(upload_file, data_file)
+        executor.submit(upload_file, data_file)
 
         time.sleep(120)
 
