@@ -8,6 +8,11 @@ import pyautogui
 from queue import Queue
 import threading
 import serial
+import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
+
+
+
 
 # Initialize S3 client
 s3_client = boto3.client('s3')
@@ -115,11 +120,11 @@ def is_file_stable(file_path, wait_time=2, retries=3):
         except FileNotFoundError:
             return False
         
-        print(f"Checking integrity... current size: {current_size}")
+        print(f"Checking integrity of {file_path}... current size: {current_size}")
         
         if current_size == last_size:
             retries -= 1
-            print(f"File stable; checking {retries} more times.")
+            print(f"File {file_path} stable; checking {retries} more times.")
         
         last_size = current_size
 
@@ -138,6 +143,9 @@ event_handler = UploadEventHandler(upload_queue)
 observer = Observer()
 observer.schedule(event_handler, path, recursive=False)
 
+executor = ThreadPoolExecutor(max_workers=5)
+
+
 #time.sleep(wait_time)
 
 # Start the observer
@@ -155,10 +163,14 @@ try:
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
         time.sleep(120)
         
+        distance_info = pd.DataFrame(columns=["Time", "Distance"])
 
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
+        current_time = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+        file_name = f"distance_data {current_time}.csv"
         print("Video recording start.")
         send_ready_signal()
+        start_timer = time.perf_counter()
         line = arduino.readline().decode('utf-8').strip()
         try:
             distance = float(line)
@@ -171,11 +183,14 @@ try:
                 try:
                     distance = float(line)
                     print(f"Distance: {distance} meters")
+                    distance_info.append({"Time": time.perf_counter() - start_timer, "Distance": distance})
                 except ValueError:
                     print("Invalid data received")
         send_back_signal()
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         print("Video recording end.")
+        data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
+        distance_info.to_csv(data_file)
         while distance >= 1.575:
             if arduino.in_waiting > 0:
                 line = arduino.readline().decode('utf-8').strip()
@@ -184,8 +199,9 @@ try:
                     print(f"Distance: {distance} meters")
                 except ValueError:
                     print("Invalid data received")
-
         send_stop_signal()
+
+        executor.submit(upload_file, data_file)
 
 
 
