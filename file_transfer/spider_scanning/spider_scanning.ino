@@ -19,8 +19,8 @@ bool forward = false;
 
 
 #define OFF 0
-#define ON_FORWARD 230
-#define ON_BACKWARD 230
+#define ON_FORWARD 255
+#define ON_BACKWARD 255
 
 
 

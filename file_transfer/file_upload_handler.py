@@ -162,12 +162,12 @@ try:
     while True:
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
         
-        
-        distance_info = pd.DataFrame(columns=["Time", "Distance"])
+        time_info = []
+        distance_info = []
 
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
     
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
         file_name = f"distance_data {current_time}.csv"
         print("Video recording start.")
         send_ready_signal()
@@ -177,28 +177,37 @@ try:
         try:
             distance = float(line)
             print(f"Distance: {distance} meters")
-        except ValueError:
+        except Exception as e:
             print("Invalid data received")
+            print(e)
+
+        
         while distance <= 1.675:
             if arduino.in_waiting > 0:
+                
                 line = arduino.readline().decode('utf-8').strip()
                 try:
                     distance = float(line)
                     print(f"Distance: {distance} meters")
-                    distance_info.append({"Time": time.perf_counter() - start_timer, "Distance": distance})
-                except ValueError:
+                    time_info.append(time.perf_counter() - start_timer)
+                    distance_info.append(distance)
+                except Exception as e:
                     print("Invalid data received")
+                    print(e)
+            
         send_back_signal()
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         print("Video recording end.")
+        data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
+        print(data_df)
         data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
-        distance_info.to_csv(data_file)
+        data_df.to_csv(data_file)
         while distance >= 1.575:
             if arduino.in_waiting > 0:
                 line = arduino.readline().decode('utf-8').strip()
                 try:
                     distance = abs(float(line))
-                    print(f"Distance: {distance} meters")
+                    #print(f"Distance: {distance} meters")
                 except ValueError:
                     print("Invalid data received")
         send_stop_signal()
