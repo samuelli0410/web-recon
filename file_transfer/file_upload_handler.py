@@ -161,7 +161,7 @@ recording_begin_time = time.time()
 try:
     while True:
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
-        time.sleep(120)
+        
         
         distance_info = pd.DataFrame(columns=["Time", "Distance"])
 
@@ -203,6 +203,7 @@ try:
 
         executor.submit(upload_file, data_file)
 
+        time.sleep(120)
 
 
 except KeyboardInterrupt:
