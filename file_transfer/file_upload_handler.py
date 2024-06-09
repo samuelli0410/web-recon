@@ -12,7 +12,7 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
 
-default_spider_name = "default"
+
 current_spider_name = "default"
 num_scans = 0
 
@@ -234,7 +234,7 @@ try:
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         print("Video recording end.")
         data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
-        print(data_df)
+        #print(data_df)
         data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
         data_df.to_csv(data_file)
         while distance >= 1.575:
