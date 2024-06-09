@@ -190,9 +190,6 @@ try:
         if not running:
             continue
         
-            
-        print(running)
-        print(num_scans)
         if num_scans > 0:
             num_scans = num_scans - 1
         else:
