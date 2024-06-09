@@ -11,6 +11,8 @@ import serial
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
+FAR_END_DISTANCE = 1.675
+
 start_distance = 1.575
 end_distance = 1.675
 
