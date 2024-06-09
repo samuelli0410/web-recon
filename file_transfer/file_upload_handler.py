@@ -45,20 +45,20 @@ def wait_for_arduino():
     while True:
         if arduino.in_waiting > 0:
             if arduino.read() == b'd':
-                print("Arduino finished.")
+                #print("Arduino finished.")
                 break
 
 def send_ready_signal():
     arduino.write(b'1')
-    print("Ready signal sent.")
+    #print("Ready signal sent.")
 
 def send_back_signal():
     arduino.write(b'2')
-    print("Back signal sent.")
+    #print("Back signal sent.")
 
 def send_stop_signal():
     arduino.write(b'3')
-    print("Stop signal sent.")
+    #print("Stop signal sent.")
 
 def wait_arduino_recovery():
     while True:
@@ -97,7 +97,7 @@ def upload_worker(upload_queue):
 
 def upload_file(file_path):
     file_name = os.path.basename(file_path)
-    print("Verifying file completeness...")
+    #print("Verifying file completeness...")
     while not is_file_stable(file_path, wait_time=5, retries=3):
         pass
     print(f'Uploading {file_name} to S3 bucket {bucket_name}...')
@@ -142,11 +142,11 @@ def is_file_stable(file_path, wait_time=2, retries=3):
         except FileNotFoundError:
             return False
         
-        print(f"Checking integrity of {file_path}... current size: {current_size}")
+        #print(f"Checking integrity of {file_path}... current size: {current_size}")
         
         if current_size == last_size:
             retries -= 1
-            print(f"File {file_path} stable; checking {retries} more times.")
+            #print(f"File {file_path} stable; checking {retries} more times.")
         
         last_size = current_size
 
@@ -180,7 +180,7 @@ uploader_thread = threading.Thread(target=upload_worker, args=(upload_queue,))
 uploader_thread.start()
 
 
-print(f'Monitoring folder {path} for new video files...')
+#print(f'Monitoring folder {path} for new video files...')
 recording_begin_time = time.time()
 
 try:
