@@ -122,15 +122,19 @@ def input_thread_function():
     global current_spider_name, num_scans, running
 
     while True:
-        user_input = input("Enter input: ")
-        if input == "stop":
-            running = False
-        current_spider_name, num_scans= tuple(user_input.split())
-        if num_scans == "inf":
-            num_scans = float("inf")
-        else:
-            num_scans = int(num_scans)
+        user_input = input("Enter input with format (spider_name num_scans): ")
+        try:
+            if input == "stop":
+                running = False
+            current_spider_name, num_scans = tuple(user_input.split())
+            if num_scans == "inf":
+                num_scans = float("inf")
+            else:
+                num_scans = int(num_scans)
             running = True
+        except Exception as e:
+            print(e)
+            print("INVALID INPUT")
 
 def is_file_stable(file_path, wait_time=2, retries=3):
     last_size = -1
