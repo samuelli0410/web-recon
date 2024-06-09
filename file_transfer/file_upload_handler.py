@@ -132,6 +132,16 @@ def input_thread_function():
                 current_spider_name, num_scans = tuple(user_input.split())
             elif len(user_input.split() == 4):
                 current_spider_name, num_scans, start_distance, end_distance = tuple(user_input.split())
+                if float(end_distance) > 1.675:
+                    end_distance = 1.675
+                    print("End distance too far, setting to 1.675...")
+                else:
+                    end_distance = float(end_distance)
+                if float(start_distance) < 1.575:
+                    start_distance = 1.575
+                    print("Start distance too close, setting to 1.575...")
+                else:
+                    start_distance = float(start_distance)
             else:
                 print("Input must be either spider_name num_scans or spider_name num_scans start_dist end_dist")
                 continue
