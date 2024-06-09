@@ -124,7 +124,7 @@ def input_thread_function():
     while True:
         user_input = input("Enter input with format (spider_name num_scans): ")
         try:
-            if input.lower() == "stop":
+            if user_input.lower() == "stop":
                 running = False
                 continue
             current_spider_name, num_scans = tuple(user_input.split())
