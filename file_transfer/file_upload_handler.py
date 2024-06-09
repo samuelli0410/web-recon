@@ -116,11 +116,13 @@ def upload_file(file_path):
     except Exception as e:
         print(f"Error during upload: {e}")
 
+running = False
 
 def input_thread_function():
     global current_spider_name, num_scans
+
     while True:
-        user_input = input("Enter spider name and number of scans separated by space: (format SPIDER_NAME NUM_SCANS)")
+        user_input = input("Enter input: ")
         current_spider_name, num_scans= tuple(user_input.split())
         num_scans = int(num_scans)
 
@@ -198,7 +200,7 @@ try:
         
         try:
             distance = float(line)
-            print(f"Distance: {distance} meters")
+            #print(f"Distance: {distance} meters")
         except Exception as e:
             print("Invalid data received")
             print(e)
@@ -210,7 +212,7 @@ try:
                 line = arduino.readline().decode('utf-8').strip()
                 try:
                     distance = float(line)
-                    print(f"Distance: {distance} meters")
+                    #print(f"Distance: {distance} meters")
                     time_info.append(time.perf_counter() - start_timer)
                     distance_info.append(distance)
                 except Exception as e:
@@ -236,7 +238,7 @@ try:
 
         executor.submit(upload_file, data_file)
 
-        time.sleep(120)
+        time.sleep(wait_time)
 
 
 except KeyboardInterrupt:
