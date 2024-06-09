@@ -238,11 +238,14 @@ try:
         time_info = []
         distance_info = []
 
-        pyautogui.hotkey('ctrl', 'f11', interval=0.1)
-    
+        if current_spider_name != "reset":
+            pyautogui.hotkey('ctrl', 'f11', interval=0.1)
+            print("Video recording start.")
+        else:
+            print("Resetting distance...")
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
         file_name = f"distance_data {current_time} {current_spider_name}.csv"
-        print("Video recording start.")
+        
         send_ready_signal()
         start_timer = time.perf_counter()
         line = arduino.readline().decode('utf-8').strip()
@@ -269,8 +272,10 @@ try:
                     print(e)
             
         send_back_signal()
-        pyautogui.hotkey('ctrl', 'f12', interval=0.1)
-        print("Video recording end.")
+        if current_spider_name != "reset":
+            pyautogui.hotkey('ctrl', 'f12', interval=0.1)
+            print("Video recording end.")
+            
         data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
         #print(data_df)
         data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
