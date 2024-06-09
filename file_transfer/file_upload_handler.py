@@ -128,9 +128,9 @@ def input_thread_function():
             if user_input.lower() == "stop":
                 running = False
                 continue
-            if len(user_input.split() == 2):
+            if len(user_input.split()) == 2:
                 current_spider_name, num_scans = tuple(user_input.split())
-            elif len(user_input.split() == 4):
+            elif len(user_input.split()) == 4:
                 current_spider_name, num_scans, start_distance, end_distance = tuple(user_input.split())
                 if float(end_distance) > 1.675:
                     end_distance = 1.675
