@@ -13,11 +13,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 # HARD LIMITS ON START AND END DISTANCE
-CLOSE_START_DISTANCE = 1.575
+CLOSE_START_DISTANCE = 1.565
 FAR_END_DISTANCE = 1.675
 
 # Default start and end distance if none are provided at start, otherwise it uses the previous scan distance
-start_distance = 1.6
+start_distance = 1.565
 end_distance = 1.675
 
 current_spider_name = "default"
@@ -143,11 +143,11 @@ def input_thread_function():
                 start_distance = float(start_distance)
                 end_distance = float(end_distance)
 
-                if end_distance > 1.675:
+                if end_distance > FAR_END_DISTANCE:
                     end_distance = FAR_END_DISTANCE
                     
                
-                if start_distance < 1.575:
+                if start_distance < CLOSE_START_DISTANCE:
                     start_distance = CLOSE_START_DISTANCE
                     
                 
