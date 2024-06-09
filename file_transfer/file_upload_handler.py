@@ -11,7 +11,8 @@ import serial
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
-
+start_distance = 1.575
+end_distance = 1.675
 
 current_spider_name = "default"
 num_scans = 0
@@ -119,7 +120,7 @@ def upload_file(file_path):
 running = False
 
 def input_thread_function():
-    global current_spider_name, num_scans, running
+    global current_spider_name, num_scans, running, start_distance, end_distance
 
     while True:
         user_input = input("Enter input with format (spider_name num_scans): ")
@@ -127,7 +128,13 @@ def input_thread_function():
             if user_input.lower() == "stop":
                 running = False
                 continue
-            current_spider_name, num_scans = tuple(user_input.split())
+            if len(user_input.split() == 2):
+                current_spider_name, num_scans = tuple(user_input.split())
+            elif len(user_input.split() == 4):
+                current_spider_name, num_scans, start_distance, end_distance = tuple(user_input.split())
+            else:
+                print("Input must be either spider_name num_scans or spider_name num_scans start_dist end_dist")
+                continue
             if num_scans == "inf":
                 num_scans = float("inf")
             else:
@@ -222,7 +229,7 @@ try:
             print(e)
 
         
-        while distance <= 1.675:
+        while distance <= end_distance:
             if arduino.in_waiting > 0:
                 
                 line = arduino.readline().decode('utf-8').strip()
@@ -242,7 +249,7 @@ try:
         #print(data_df)
         data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
         data_df.to_csv(data_file)
-        while distance >= 1.575:
+        while distance >= start_distance:
             if arduino.in_waiting > 0:
                 line = arduino.readline().decode('utf-8').strip()
                 try:
