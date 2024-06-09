@@ -105,7 +105,7 @@ def upload_file(file_path):
     try:
         new_file_name = file_path.replace(".mp4", "") + " " + current_spider_name + ".mp4"
         os.rename(file_path, new_file_name)
-        s3_client.upload_file(new_file_name, bucket_name, file_name)
+        s3_client.upload_file(new_file_name, bucket_name, os.path.basename(new_file_name))
         print(f'{new_file_name} uploaded.')
         end_time = time.time()
         print(f"Upload took {end_time - start_time} seconds to complete.")
@@ -185,8 +185,11 @@ recording_begin_time = time.time()
 
 try:
     while True:
+        if num_scans <= 0:
+            running = False
         if not running:
             continue
+        
             
         print(running)
         print(num_scans)
