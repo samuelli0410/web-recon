@@ -275,7 +275,7 @@ try:
         if current_spider_name != "reset":
             pyautogui.hotkey('ctrl', 'f12', interval=0.1)
             print("Video recording end.")
-            
+
         data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
         #print(data_df)
         data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
@@ -292,7 +292,8 @@ try:
 
         executor.submit(upload_file, data_file)
 
-        time.sleep(wait_time)
+        if current_spider_name != "reset":
+            time.sleep(wait_time)
 
 
 except KeyboardInterrupt:
