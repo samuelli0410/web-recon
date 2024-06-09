@@ -119,12 +119,18 @@ def upload_file(file_path):
 running = False
 
 def input_thread_function():
-    global current_spider_name, num_scans
+    global current_spider_name, num_scans, running
 
     while True:
         user_input = input("Enter input: ")
+        if input == "stop":
+            running = False
         current_spider_name, num_scans= tuple(user_input.split())
-        num_scans = int(num_scans)
+        if num_scans == "inf":
+            num_scans = float("inf")
+        else:
+            num_scans = int(num_scans)
+            running = True
 
 def is_file_stable(file_path, wait_time=2, retries=3):
     last_size = -1
@@ -179,10 +185,12 @@ recording_begin_time = time.time()
 
 try:
     while True:
+        if not running:
+            continue
         if num_scans > 0:
             num_scans = num_scans - 1
         else:
-            current_spider_name = default_spider_name
+            running = False
             
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
         
@@ -192,7 +200,7 @@ try:
         pyautogui.hotkey('ctrl', 'f11', interval=0.1)
     
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
-        file_name = f"distance_data {current_time}.csv"
+        file_name = f"distance_data {current_time} {current_spider_name}.csv"
         print("Video recording start.")
         send_ready_signal()
         start_timer = time.perf_counter()
