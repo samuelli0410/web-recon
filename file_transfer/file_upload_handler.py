@@ -11,9 +11,10 @@ import serial
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
+CLOSE_START_DISTANCE = 1.575
 FAR_END_DISTANCE = 1.675
 
-start_distance = 1.575
+start_distance = 1.6
 end_distance = 1.675
 
 current_spider_name = "default"
@@ -130,28 +131,36 @@ def input_thread_function():
             if user_input.lower() == "stop":
                 running = False
                 continue
+
             if len(user_input.split()) == 2:
                 current_spider_name, num_scans = tuple(user_input.split())
             elif len(user_input.split()) == 4:
                 current_spider_name, num_scans, start_distance, end_distance = tuple(user_input.split())
-                if float(end_distance) > 1.675:
-                    end_distance = 1.675
-                    print("End distance too far, setting to 1.675...")
-                else:
-                    end_distance = float(end_distance)
-                if float(start_distance) < 1.575:
-                    start_distance = 1.575
-                    print("Start distance too close, setting to 1.575...")
-                else:
-                    start_distance = float(start_distance)
+
+                start_distance = float(start_distance)
+                end_distance = float(end_distance)
+
+                if end_distance > 1.675:
+                    end_distance = FAR_END_DISTANCE
+                    
+               
+                if start_distance < 1.575:
+                    start_distance = CLOSE_START_DISTANCE
+                    
+                
             else:
                 print("Input must be either spider_name num_scans or spider_name num_scans start_dist end_dist")
                 continue
+
             if num_scans == "inf":
                 num_scans = float("inf")
             else:
-                num_scans = int(num_scans)
+                num_scans = int(num_scans)    
+
+            
             running = True
+            print(f"Current running settings: {current_spider_name, num_scans, start_distance, end_distance}")
+
         except Exception as e:
             print(e)
             print("INVALID INPUT")
@@ -209,8 +218,10 @@ recording_begin_time = time.time()
 
 try:
     while True:
+        
         if num_scans <= 0:
             running = False
+    
         if not running:
             continue
         
@@ -290,3 +301,4 @@ finally:
 
 
 
+print("Reached end of program")
