@@ -11,9 +11,12 @@ import serial
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
+
+# HARD LIMITS ON START AND END DISTANCE
 CLOSE_START_DISTANCE = 1.575
 FAR_END_DISTANCE = 1.675
 
+# Default start and end distance if none are provided at start, otherwise it uses the previous scan distance
 start_distance = 1.6
 end_distance = 1.675
 
