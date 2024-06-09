@@ -126,6 +126,7 @@ def input_thread_function():
         try:
             if input == "stop":
                 running = False
+                continue
             current_spider_name, num_scans = tuple(user_input.split())
             if num_scans == "inf":
                 num_scans = float("inf")
