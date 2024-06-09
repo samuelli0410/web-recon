@@ -276,10 +276,11 @@ try:
             pyautogui.hotkey('ctrl', 'f12', interval=0.1)
             print("Video recording end.")
 
-        data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
-        #print(data_df)
-        data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
-        data_df.to_csv(data_file)
+            data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
+            #print(data_df)
+            data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
+            data_df.to_csv(data_file)
+            
         while distance >= start_distance:
             if arduino.in_waiting > 0:
                 line = arduino.readline().decode('utf-8').strip()
