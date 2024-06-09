@@ -280,7 +280,8 @@ try:
             #print(data_df)
             data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
             data_df.to_csv(data_file)
-            
+            executor.submit(upload_file, data_file)
+
         while distance >= start_distance:
             if arduino.in_waiting > 0:
                 line = arduino.readline().decode('utf-8').strip()
@@ -290,8 +291,6 @@ try:
                 except ValueError:
                     print("Invalid data received")
         send_stop_signal()
-
-        executor.submit(upload_file, data_file)
 
         if current_spider_name != "reset" and num_scans == float("inf"):
             time.sleep(wait_time)
