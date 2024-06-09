@@ -12,6 +12,10 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
 
+default_spider_name = "default"
+current_spider_name = "default"
+num_scans = 0
+
 
 
 # Initialize S3 client
@@ -99,16 +103,26 @@ def upload_file(file_path):
     print(f'Uploading {file_name} to S3 bucket {bucket_name}...')
     start_time = time.time()
     try:
-        s3_client.upload_file(file_path, bucket_name, file_name)
-        print(f'{file_name} uploaded.')
+        new_file_name = file_path.replace(".mp4", "") + " " + current_spider_name + ".mp4"
+        os.rename(file_path, new_file_name)
+        s3_client.upload_file(new_file_name, bucket_name, file_name)
+        print(f'{new_file_name} uploaded.')
         end_time = time.time()
         print(f"Upload took {end_time - start_time} seconds to complete.")
         if delete_video:
             print("Removing file...")
-            os.remove(file_path)
+            os.remove(new_file_name)
         
     except Exception as e:
         print(f"Error during upload: {e}")
+
+
+def input_thread_function():
+    global current_spider_name, num_scans
+    while True:
+        user_input = input("Enter spider name and number of scans separated by space: (format SPIDER_NAME NUM_SCANS)")
+        current_spider_name, num_scans= tuple(user_input.split())
+        num_scans = int(num_scans)
 
 def is_file_stable(file_path, wait_time=2, retries=3):
     last_size = -1
@@ -145,8 +159,11 @@ observer.schedule(event_handler, path, recursive=False)
 
 executor = ThreadPoolExecutor(max_workers=5)
 
+input_thread = threading.Thread(target=input_thread_function)
+input_thread.daemon = True
+input_thread.start()
 
-#time.sleep(wait_time)
+
 
 # Start the observer
 observer.start()
@@ -160,6 +177,11 @@ recording_begin_time = time.time()
 
 try:
     while True:
+        if num_scans > 0:
+            num_scans = num_scans - 1
+        else:
+            current_spider_name = default_spider_name
+            
         print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
         
         time_info = []
