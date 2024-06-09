@@ -36,7 +36,7 @@ bucket_name = 'spider-videos'
 video_length = 15 # redundant if determined by arduino
 
 # Set waiting time (seconds) between videos
-wait_time = 1
+wait_time = 120
 
 # Choose whether to delete video upon upload
 delete_video = True
@@ -292,7 +292,7 @@ try:
 
         executor.submit(upload_file, data_file)
 
-        if current_spider_name != "reset":
+        if current_spider_name != "reset" and num_scans == float("inf"):
             time.sleep(wait_time)
 
 
