@@ -45,6 +45,10 @@ delete_video = True
 arduino_port = "COM3"
 
 arduino = serial.Serial(arduino_port, 115200)
+
+LED_arduino_port = "COM4"
+
+LED_arduino = serial.Serial(LED_arduino_port, 9600)
 time.sleep(3)
 
 
@@ -66,6 +70,18 @@ def send_back_signal():
 def send_stop_signal():
     arduino.write(b'3')
     #print("Stop signal sent.")
+
+def send_LED_brightness(brightness_level):
+    if brightness_level == 0:
+        LED_arduino.write(b'0')
+    elif brightness_level == 1:
+        LED_arduino.write(b'1')
+    elif brightness_level == 2:
+        LED_arduino.write(b'2')
+    elif brightness_level == 3:
+        LED_arduino.write(b'3')
+    else:
+        raise Exception("Invalid brightness value.")
 
 def wait_arduino_recovery():
     while True:
@@ -219,6 +235,8 @@ uploader_thread.start()
 #print(f'Monitoring folder {path} for new video files...')
 recording_begin_time = time.time()
 
+cycle_brightness = 0
+
 try:
     while True:
         
@@ -239,6 +257,8 @@ try:
         distance_info = []
 
         if current_spider_name != "reset":
+            cycle_brightness = (cycle_brightness + 1) % 3
+            send_LED_brightness(cycle_brightness + 1)
             pyautogui.hotkey('ctrl', 'f11', interval=0.1)
             print("Video recording start.")
         else:
@@ -272,6 +292,7 @@ try:
                     print(e)
             
         send_back_signal()
+        send_LED_brightness(0)
         if current_spider_name != "reset":
             pyautogui.hotkey('ctrl', 'f12', interval=0.1)
             print("Video recording end.")
