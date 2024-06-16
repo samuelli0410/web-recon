@@ -36,7 +36,7 @@ bucket_name = 'spider-videos'
 video_length = 15 # redundant if determined by arduino
 
 # Set waiting time (seconds) between videos
-wait_time = 120
+wait_time = 3
 
 # Choose whether to delete video upon upload
 delete_video = True
@@ -72,6 +72,7 @@ def send_stop_signal():
     #print("Stop signal sent.")
 
 def send_LED_brightness(brightness_level):
+    print(f"Brightness {brightness_level}")
     if brightness_level == 0:
         LED_arduino.write(b'0')
     elif brightness_level == 1:
@@ -142,7 +143,7 @@ def upload_file(file_path):
 running = False
 
 def input_thread_function():
-    global current_spider_name, num_scans, running, start_distance, end_distance
+    global current_spider_name, num_scans, running, start_distance, end_distance, cycle_brightness
 
     while True:
         user_input = input("Enter input with format (spider_name num_scans): ")
@@ -176,7 +177,7 @@ def input_thread_function():
             else:
                 num_scans = int(num_scans)    
 
-            
+            cycle_brightness = 0
             running = True
             print(f"Current running settings: {current_spider_name, num_scans, start_distance, end_distance}")
 
@@ -257,8 +258,9 @@ try:
         distance_info = []
 
         if current_spider_name != "reset":
-            cycle_brightness = (cycle_brightness + 1) % 3
+            
             send_LED_brightness(cycle_brightness + 1)
+            cycle_brightness = (cycle_brightness + 1) % 3
             pyautogui.hotkey('ctrl', 'f11', interval=0.1)
             print("Video recording start.")
         else:
