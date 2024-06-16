@@ -36,7 +36,7 @@ bucket_name = 'spider-videos'
 video_length = 15 # redundant if determined by arduino
 
 # Set waiting time (seconds) between videos
-wait_time = 3
+wait_time = 20
 
 # Choose whether to delete video upon upload
 delete_video = True
@@ -317,7 +317,8 @@ try:
                     print("Invalid data received")
         send_stop_signal()
 
-        if current_spider_name != "reset" and num_scans == float("inf"):
+        if current_spider_name != "reset" and num_scans == float("inf") and not cycle_brightness: # last statement creates batched scans
+            print(f'last cycle\'s brightness mod 4: {cycle_brightness}')
             time.sleep(wait_time)
 
 
