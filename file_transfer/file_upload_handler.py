@@ -81,6 +81,8 @@ def send_LED_brightness(brightness_level):
         LED_arduino.write(b'2')
     elif brightness_level == 3:
         LED_arduino.write(b'3')
+    elif brightness_level == 4:
+        LED_arduino.write(b'4')
     else:
         raise Exception("Invalid brightness value.")
 
@@ -260,7 +262,7 @@ try:
         if current_spider_name != "reset":
             
             send_LED_brightness(cycle_brightness + 1)
-            cycle_brightness = (cycle_brightness + 1) % 3
+            cycle_brightness = (cycle_brightness + 1) % 4
             pyautogui.hotkey('ctrl', 'f11', interval=0.1)
             print("Video recording start.")
         else:
