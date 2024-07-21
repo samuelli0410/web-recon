@@ -24,7 +24,6 @@ current_spider_name = "default"
 num_scans = 0
 
 
-
 # Initialize S3 client
 s3_client = boto3.client('s3')
 
@@ -59,17 +58,21 @@ def wait_for_arduino():
                 #print("Arduino finished.")
                 break
 
+
 def send_ready_signal():
     arduino.write(b'1')
     #print("Ready signal sent.")
+
 
 def send_back_signal():
     arduino.write(b'2')
     #print("Back signal sent.")
 
+
 def send_stop_signal():
     arduino.write(b'3')
     #print("Stop signal sent.")
+
 
 def send_LED_brightness(brightness_level):
     print(f"Brightness {brightness_level}")
@@ -86,12 +89,26 @@ def send_LED_brightness(brightness_level):
     else:
         raise Exception("Invalid brightness value.")
 
+
 def wait_arduino_recovery():
     while True:
         if arduino.in_waiting > 0:
             if arduino.read() == b's':
                 print("Backward finished.")
                 break
+
+
+def get_size(path):
+    size = os.path.getsize(path)
+    if size < 1024:
+        return f"{size} bytes"
+    elif size < pow(1024,2):
+        return f"{round(size/1024, 2)} KB"
+    elif size < pow(1024,3):
+        return f"{round(size/(pow(1024,2)), 2)} MB"
+    elif size < pow(1024,4):
+        return f"{round(size/(pow(1024,3)), 2)} GB"
+
 
 processed_files = set()
 
@@ -107,6 +124,7 @@ class UploadEventHandler(FileSystemEventHandler):
             self.upload_queue.put(event.src_path)
             print("Adding to queue...")
             print("Queue state:", self.upload_queue.queue)
+
 
 def upload_worker(upload_queue):
     while not shutdown_flag.is_set():
@@ -127,76 +145,77 @@ def upload_file(file_path):
     while not is_file_stable(file_path, wait_time=5, retries=3):
         pass
     print(f'Uploading {file_name} to S3 bucket {bucket_name}...')
+    print(f'File size: {get_size(file_path)}')
     start_time = time.time()
     try:
-        new_file_name = file_path.replace(".mp4", "") + " " + current_spider_name + ".mp4"
-        os.rename(file_path, new_file_name)
-        s3_client.upload_file(new_file_name, bucket_name, os.path.basename(new_file_name))
-        print(f'{new_file_name} uploaded.')
+        ext = os.path.splitext(file_path)[1]
+        # if ext == ".csv":
+        #     msg = "Uploading distance file..."
+        # elif ext == ".mp4":
+        #     msg = "Uploading video..."
+        # else:
+        #     raise OSError(f"Invalid file extension: {ext}")
+        
+        # new_file_name = file_path.replace(".mp4", "") + " " + current_spider_name + ".mp4"
+        # os.rename(file_path, new_file_name)
+        print(f"Uploading {ext} file...")
+        if "mp4" in ext:
+            save_name = os.path.basename(file_path).replace(".mp4", "") + " " + current_spider_name + ".mp4"
+        else:
+            save_name = os.path.basename(file_path)
+        # s3_client.upload_file(new_file_name, bucket_name, os.path.basename(new_file_name))
+        s3_client.upload_file(file_path, bucket_name, save_name)
+        # print(f'{new_file_name} uploaded.')
+        print(f"{file_name} uploaded.")
         end_time = time.time()
-        print(f"Upload took {end_time - start_time} seconds to complete.")
+        print(f"Upload took {end_time - start_time:.2f} seconds to complete.")
         if delete_video:
             print("Removing file...")
-            os.remove(new_file_name)
+            # os.remove(new_file_name)
+            os.remove(file_path)
         
     except Exception as e:
         print(f"Error during upload: {e}")
 
-running = False
 
-def input_thread_function():
+def check_input(user_input):
+    """Check if the input is valid or not"""
     global current_spider_name, num_scans, running, start_distance, end_distance, cycle_brightness
 
-    while True:
-        user_input = input("Enter input with format (spider_name num_scans): ")
-        try:
-            if user_input.lower() == "stop":
-                running = False
-                continue
+    try:
+        if len(user_input.split()) == 2:
+            current_spider_name, num_scans = tuple(user_input.split())
+        elif len(user_input.split()) == 4:
+            current_spider_name, num_scans, start_distance, end_distance = tuple(user_input.split())
 
-            if len(user_input.split()) == 2:
-                current_spider_name, num_scans = tuple(user_input.split())
-            elif len(user_input.split()) == 4:
-                current_spider_name, num_scans, start_distance, end_distance = tuple(user_input.split())
+            start_distance = max(float(start_distance), CLOSE_START_DISTANCE)
+            end_distance = min(float(end_distance), FAR_END_DISTANCE)
+        else:
+            raise ValueError("Input must be either spider_name num_scans or spider_name num_scans start_dist end_dist")
 
-                start_distance = float(start_distance)
-                end_distance = float(end_distance)
+        if num_scans == "inf":
+            num_scans = float("inf")
+        else:
+            num_scans = int(num_scans)    
 
-                if end_distance > FAR_END_DISTANCE:
-                    end_distance = FAR_END_DISTANCE
-                    
-               
-                if start_distance < CLOSE_START_DISTANCE:
-                    start_distance = CLOSE_START_DISTANCE
-                    
-                
-            else:
-                print("Input must be either spider_name num_scans or spider_name num_scans start_dist end_dist")
-                continue
+        cycle_brightness = 0
+        running = True
+        print(f"Current running settings: {current_spider_name, num_scans, start_distance, end_distance}")
 
-            if num_scans == "inf":
-                num_scans = float("inf")
-            else:
-                num_scans = int(num_scans)    
+    except Exception as e:
+        print(e)
+        print("INVALID INPUT")
+    return current_spider_name, num_scans, start_distance, end_distance
 
-            cycle_brightness = 0
-            running = True
-            print(f"Current running settings: {current_spider_name, num_scans, start_distance, end_distance}")
-
-        except Exception as e:
-            print(e)
-            print("INVALID INPUT")
 
 def is_file_stable(file_path, wait_time=2, retries=3):
     last_size = -1
 
     while True:
-        
         try:
             current_size = os.path.getsize(file_path)
         except FileNotFoundError:
             return False
-        
         #print(f"Checking integrity of {file_path}... current size: {current_size}")
         
         if current_size == last_size:
@@ -211,129 +230,121 @@ def is_file_stable(file_path, wait_time=2, retries=3):
         time.sleep(wait_time)
 
 
-shutdown_flag = threading.Event()
-
-# Set up the observer
-path = os.path.expanduser('~/Videos')
-upload_queue = Queue()
-event_handler = UploadEventHandler(upload_queue)
-observer = Observer()
-observer.schedule(event_handler, path, recursive=False)
-
-executor = ThreadPoolExecutor(max_workers=5)
-
-input_thread = threading.Thread(target=input_thread_function)
-input_thread.daemon = True
-input_thread.start()
-
-
-
-# Start the observer
-observer.start()
-
-uploader_thread = threading.Thread(target=upload_worker, args=(upload_queue,))
-uploader_thread.start()
-
-
-#print(f'Monitoring folder {path} for new video files...')
-recording_begin_time = time.time()
-
-cycle_brightness = 0
-
-try:
-    while True:
-        
-        if num_scans <= 0:
-            running = False
+if __name__ == "__main__":
+    user_input = input("Enter input with format (current_spider_name num_scans (optional)start_distance (optional)end_distance): ")
     
-        if not running:
-            continue
-        
-        if num_scans > 0:
-            num_scans = num_scans - 1
-        else:
-            running = False
-            
-        print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
-        
-        time_info = []
-        distance_info = []
+    current_spider_name, num_scans, start_distance, end_distance = check_input(user_input)
 
-        if current_spider_name != "reset":
-            
-            send_LED_brightness(cycle_brightness + 1)
-            cycle_brightness = (cycle_brightness + 1) % 4
-            pyautogui.hotkey('ctrl', 'f11', interval=0.1)
-            print("Video recording start.")
-        else:
-            print("Resetting distance...")
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
-        file_name = f"distance_data {current_time} {current_spider_name}.csv"
-        
-        send_ready_signal()
-        start_timer = time.perf_counter()
-        line = arduino.readline().decode('utf-8').strip()
-        
-        try:
-            distance = float(line)
-            #print(f"Distance: {distance} meters")
-        except Exception as e:
-            print("Invalid data received")
-            print(e)
+    shutdown_flag = threading.Event()
 
-        
-        while distance <= end_distance:
-            if arduino.in_waiting > 0:
+    print("Set up the observer")
+    path = os.path.expanduser('~/Videos')
+    upload_queue = Queue()
+    event_handler = UploadEventHandler(upload_queue)
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=False)
+
+    executor = ThreadPoolExecutor(max_workers=5)
+
+    print("Start the observer")
+    observer.start()
+
+    uploader_thread = threading.Thread(target=upload_worker, args=(upload_queue,))
+    uploader_thread.start()
+
+    recording_begin_time = time.time()
+
+    cycle_brightness = 0
+    cnt_scan = 0
+
+    try:
+        while True:
+            if cnt_scan == num_scans:
+                running = False
+            if not running:
+                break
+
+            print(f"Scan {cnt_scan + 1}")
+            print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
+            
+            time_info = []
+            distance_info = []
+
+            if current_spider_name != "reset":
+                send_LED_brightness(cycle_brightness + 1)
+                cycle_brightness = (cycle_brightness + 1) % 4
+                pyautogui.hotkey('ctrl', 'f11', interval=0.1)
+                print("Video recording start.")
+            else:
+                print("Resetting distance...")
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+            file_name = f"distance_data {current_time} {current_spider_name} {cnt_scan + 1}"
+            
+            send_ready_signal()
+            start_timer = time.perf_counter()
+            line = arduino.readline().decode('utf-8').strip()
+            
+            try:
+                distance = float(line)
+                #print(f"Distance: {distance} meters")
+            except Exception as e:
+                print("Invalid data received")
+                print(e)
+                send_stop_signal()
+
+            while distance <= end_distance:
+                if arduino.in_waiting > 0:
+                    line = arduino.readline().decode('utf-8').strip()
+                    try:
+                        distance = float(line)
+                        #print(f"Distance: {distance} meters")
+                        time_info.append(time.perf_counter() - start_timer)
+                        distance_info.append(distance)
+                    except Exception as e:
+                        print("Invalid data received")
+                        print(e)
+                        send_stop_signal()
                 
-                line = arduino.readline().decode('utf-8').strip()
-                try:
-                    distance = float(line)
-                    #print(f"Distance: {distance} meters")
-                    time_info.append(time.perf_counter() - start_timer)
-                    distance_info.append(distance)
-                except Exception as e:
-                    print("Invalid data received")
-                    print(e)
-            
-        send_back_signal()
-        send_LED_brightness(0)
-        if current_spider_name != "reset":
-            pyautogui.hotkey('ctrl', 'f12', interval=0.1)
-            print("Video recording end.")
+            send_back_signal()
+            send_LED_brightness(0)
+            if current_spider_name != "reset":
+                pyautogui.hotkey('ctrl', 'f12', interval=0.1)
+                print("Video recording end.")
 
-            data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
-            #print(data_df)
-            data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}")
-            data_df.to_csv(data_file)
-            executor.submit(upload_file, data_file)
+                data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
+                #print(data_df)
+                data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{file_name}.csv")
+                data_df.to_csv(data_file)
+                executor.submit(upload_file, data_file)
 
-        while distance >= start_distance:
-            if arduino.in_waiting > 0:
-                line = arduino.readline().decode('utf-8').strip()
-                try:
-                    distance = abs(float(line))
-                    #print(f"Distance: {distance} meters")
-                except ValueError:
-                    print("Invalid data received")
-        send_stop_signal()
+            while distance >= start_distance:
+                if arduino.in_waiting > 0:
+                    line = arduino.readline().decode('utf-8').strip()
+                    #print(line)
+                    try:
+                        distance = abs(float(line))
+                        #print(f"Distance: {distance} meters")
+                    except ValueError:
+                        print("Invalid data received")
+                        send_stop_signal()
+            send_stop_signal()
 
-        if current_spider_name != "reset" and num_scans == float("inf") and not cycle_brightness: # last statement creates batched scans
-            print(f'last cycle\'s brightness mod 4: {cycle_brightness}')
-            time.sleep(wait_time)
+            if current_spider_name != "reset" and num_scans == float("inf") and not cycle_brightness: # last statement creates batched scans
+                print(f'last cycle\'s brightness mod 4: {cycle_brightness}')
+                time.sleep(wait_time)
 
+            cnt_scan += 1
 
-except KeyboardInterrupt:
-    print("KEYBOARD INTERRUPT; FINALIZING UPLOADS...")
-    pyautogui.hotkey('ctrl', 'f12', interval=0.1)
-    shutdown_flag.set()
-    upload_queue.put(None)
+    except KeyboardInterrupt:
+        print("KEYBOARD INTERRUPT; FINALIZING UPLOADS...")
+        pyautogui.hotkey('ctrl', 'f12', interval=0.1)
+        shutdown_flag.set()
+        upload_queue.put(None)
 
-finally:
-    uploader_thread.join()
-    observer.stop()
-    observer.join()
-    print("Processes stopped.")
+    finally:
+        uploader_thread.join()
+        observer.stop()
+        observer.join()
+        print("Processes stopped.")
 
-
-
-print("Reached end of program")
+    print("Reached end of program")
