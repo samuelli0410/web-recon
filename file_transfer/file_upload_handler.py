@@ -23,7 +23,6 @@ end_distance = 1.675
 current_spider_name = "default"
 num_scans = 0
 
-
 # Initialize S3 client
 s3_client = boto3.client('s3')
 
@@ -149,29 +148,16 @@ def upload_file(file_path):
     start_time = time.time()
     try:
         ext = os.path.splitext(file_path)[1]
-        # if ext == ".csv":
-        #     msg = "Uploading distance file..."
-        # elif ext == ".mp4":
-        #     msg = "Uploading video..."
-        # else:
-        #     raise OSError(f"Invalid file extension: {ext}")
-        
-        # new_file_name = file_path.replace(".mp4", "") + " " + current_spider_name + ".mp4"
-        # os.rename(file_path, new_file_name)
-        print(f"Uploading {ext} file...")
         if "mp4" in ext:
             save_name = os.path.basename(file_path).replace(".mp4", "") + " " + current_spider_name + ".mp4"
         else:
             save_name = os.path.basename(file_path)
-        # s3_client.upload_file(new_file_name, bucket_name, os.path.basename(new_file_name))
         s3_client.upload_file(file_path, bucket_name, save_name)
-        # print(f'{new_file_name} uploaded.')
         print(f"{file_name} uploaded.")
         end_time = time.time()
         print(f"Upload took {end_time - start_time:.2f} seconds to complete.")
         if delete_video:
             print("Removing file...")
-            # os.remove(new_file_name)
             os.remove(file_path)
         
     except Exception as e:
@@ -278,7 +264,7 @@ if __name__ == "__main__":
             else:
                 print("Resetting distance...")
             current_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
-            file_name = f"distance_data {current_time} {current_spider_name} {cnt_scan + 1}"
+            file_name = f"distance_data {current_time} {current_spider_name}"
             
             send_ready_signal()
             start_timer = time.perf_counter()
