@@ -146,6 +146,8 @@ class UploadEventHandler(FileSystemEventHandler):
             data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
             data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{csv_file_name}.csv")
             data_df.to_csv(data_file)
+            time_info.clear()
+            distance_info.clear()
             time.sleep(5)
             executor.submit(upload_file, data_file)
             
