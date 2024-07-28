@@ -332,14 +332,12 @@ if __name__ == "__main__":
             print("Video recording start.")
             
             send_ready_signal()
-            print("another")
             start_timer = time.perf_counter()
             # while True:
             #     line = arduino.readline().decode('utf-8').strip()
             #     if line != "":
             #         break
             line = arduino.readline().decode('utf-8').strip()
-            print("bb")
             try:
                 distance = float(line)
                 #print(f"Distance: {distance} meters")
@@ -348,11 +346,9 @@ if __name__ == "__main__":
                 print(e)
                 send_stop_signal()
 
-            print("cc")
 
             # Prepare distance data
             while distance <= end_distance:
-                print("a", time.time())
                 if arduino.in_waiting > 0:
                     line = arduino.readline().decode('utf-8').strip()
                     try:
@@ -371,7 +367,6 @@ if __name__ == "__main__":
                 pyautogui.hotkey('ctrl', 'f12', interval=0.1)
                 print("Video recording end.")
             while distance >= start_distance:
-                print("b", time.time(), distance, start_distance)
                 if arduino.in_waiting > 0:
                     line = arduino.readline().decode('utf-8').strip()
                     # print(line)
@@ -382,7 +377,6 @@ if __name__ == "__main__":
                         print("Invalid data received")
                         send_stop_signal()
             send_stop_signal()
-            print("after stop signal")
 
             if current_spider_name != "reset" and num_scans == float("inf") and not cycle_brightness: # last statement creates batched scans
                 print(f'last cycle\'s brightness mod 4: {cycle_brightness}')
@@ -399,9 +393,7 @@ if __name__ == "__main__":
     finally:
         print("Shutting down processes...")
         uploader_thread.join()
-        print("aa")
         observer.stop()
-        print("bb")
         observer.join()
         print("Processes stopped.")
 
