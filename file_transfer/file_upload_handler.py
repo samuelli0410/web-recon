@@ -34,7 +34,7 @@ bucket_name = 'spider-videos'
 video_length = 15 # redundant if determined by arduino
 
 # Set waiting time (seconds) between videos
-wait_time = 300
+wait_time = 1200
 
 # Choose whether to delete video upon upload
 delete_video = True
@@ -139,7 +139,7 @@ class UploadEventHandler(FileSystemEventHandler):
 
             # Get timestamp from the file name
             file_name = os.path.basename(event.src_path)
-            current_time = file_name.split(" ")[-1].split(".")[0]
+            current_time = file_name.split(".")[0]
             csv_file_name = f"distance_data {current_time} {current_spider_name} {current_brightness}"
 
             # Make csv file
