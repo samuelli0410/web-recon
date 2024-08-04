@@ -144,6 +144,9 @@ class UploadEventHandler(FileSystemEventHandler):
 
             # Make csv file
             data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
+            print("Distance data sample for", csv_file_name)
+            print(data_df.head())
+            print("Total number of logs:", len(data_df))
             data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{csv_file_name}.csv")
             data_df.to_csv(data_file)
             time_info.clear()
@@ -187,7 +190,6 @@ def upload_file(file_path, brightness=None):
             print(f"Save name: {save_name}")
         else:  # .csv
             save_name = os.path.basename(file_path)
-            # save_name = os.path.basename(file_path).replace(".csv", "") + " " + brightness + ".csv"
         s3_client.upload_file(file_path, bucket_name, save_name)
         print(f"{file_name} uploaded.")
         end_time = time.time()
@@ -195,6 +197,7 @@ def upload_file(file_path, brightness=None):
         if delete_video:
             print("Removing file...")
             os.remove(file_path)
+        
         
     except Exception as e:
         print(f"Error during upload: {e}")
@@ -256,13 +259,15 @@ def is_file_stable(file_path, wait_time=2, retries=3):
 def reset_position():
     print("Resetting position...")
     send_LED_brightness(0)
-    # send_ready_signal()
+    send_ready_signal()
+    send_stop_signal()
     send_back_signal()
 
-    line = arduino.readline().decode('utf-8').strip()
-    line = arduino.readline().decode('utf-8').strip()
+    while True:
+        line = arduino.readline().decode('utf-8').strip()
+        if line != "":
+            break
     distance = float(line)
-
     while distance >= start_distance:
         if arduino.in_waiting > 0:
             line = arduino.readline().decode('utf-8').strip()
@@ -290,6 +295,7 @@ if __name__ == "__main__":
 
     shutdown_flag = threading.Event()
 
+
     print("Set up the observer")
     path = os.path.expanduser('~/Videos')
     upload_queue = Queue()
@@ -310,7 +316,7 @@ if __name__ == "__main__":
     cycle_brightness = 0
     cnt_scan = 0
 
-    # reset_position()
+    reset_position()
 
     try:
         while True:
@@ -323,10 +329,6 @@ if __name__ == "__main__":
             print(f"Scan {cnt_scan + 1}")
             print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
             
-            # time_info = []
-            # distance_info = []
-
-            # if current_spider_name != "reset":
             current_brightness = brightness_dict[cycle_brightness + 1]
             send_LED_brightness(cycle_brightness + 1)
             
@@ -335,16 +337,16 @@ if __name__ == "__main__":
             
             send_ready_signal()
             start_timer = time.perf_counter()
-            # while True:
-            #     line = arduino.readline().decode('utf-8').strip()
-            #     if line != "":
-            #         break
-            line = arduino.readline().decode('utf-8').strip()
+            while True:
+                line = arduino.readline().decode('utf-8').strip()
+                if line != "":
+                    break
+            # line = arduino.readline().decode('utf-8').strip()
             try:
                 distance = float(line)
                 #print(f"Distance: {distance} meters")
             except Exception as e:
-                print("Invalid data received")
+                print("Invalid data received (1)")
                 print(e)
                 send_stop_signal()
 
@@ -359,7 +361,7 @@ if __name__ == "__main__":
                         time_info.append(time.perf_counter() - start_timer)
                         distance_info.append(distance)
                     except Exception as e:
-                        print("Invalid data received")
+                        print("Invalid data received (2)")
                         print(e)
                         send_stop_signal()
                 
@@ -375,8 +377,9 @@ if __name__ == "__main__":
                     try:
                         distance = abs(float(line))
                         # print(f"Distance: {distance} meters")
-                    except ValueError:
-                        print("Invalid data received")
+                    except Exception as e:
+                        print("Invalid data received (3)")
+                        print(e)
                         send_stop_signal()
             send_stop_signal()
 
@@ -388,12 +391,14 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:
         print("KEYBOARD INTERRUPT; FINALIZING UPLOADS...")
+        send_stop_signal()
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
         shutdown_flag.set()
         upload_queue.put(None)
 
     finally:
         print("Shutting down processes...")
+        shutdown_flag.set()
         uploader_thread.join()
         observer.stop()
         observer.join()
