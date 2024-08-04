@@ -197,6 +197,7 @@ def upload_file(file_path, brightness=None):
         if delete_video:
             print("Removing file...")
             os.remove(file_path)
+            print(f"{file_name} removed.")
         
         
     except Exception as e:
@@ -334,7 +335,9 @@ if __name__ == "__main__":
             
             pyautogui.hotkey('ctrl', 'f11', interval=0.1)
             print(f"Video recording start: scan {cnt_scan + 1}.")
-            
+
+            arduino.reset_input_buffer()
+            time.sleep(.1)
             send_ready_signal()
             while True:
                 line = arduino.readline().decode('utf-8').strip()
@@ -352,7 +355,8 @@ if __name__ == "__main__":
 
             # Prepare distance data
             start_timer = time.perf_counter()
-            arduino.reset_input_buffer()
+            # time.sleep(0.5)
+
             while distance <= end_distance:
                 if arduino.in_waiting > 0:
                     
@@ -399,6 +403,7 @@ if __name__ == "__main__":
                 time.sleep(wait_time)
 
             cnt_scan += 1
+            cycle_brightness = (cycle_brightness + 1) % 4
 
     except KeyboardInterrupt:
         print("KEYBOARD INTERRUPT; FINALIZING UPLOADS...")
