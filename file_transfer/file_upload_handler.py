@@ -132,7 +132,7 @@ class UploadEventHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         print(f"Current event: {event.src_path}")
-        time.sleep(5)
+        time.sleep(25)
         if not event.is_directory and event.src_path.lower().endswith(".mp4") and event.src_path not in processed_files:
             current_brightness = brightness_dict[self.brightness_counter + 1]
             self.brightness_counter = (self.brightness_counter + 1) % 4
@@ -151,7 +151,7 @@ class UploadEventHandler(FileSystemEventHandler):
             data_df.to_csv(data_file)
             time_info.clear()
             distance_info.clear()
-            time.sleep(5)
+            # time.sleep(5)
             executor.submit(upload_file, data_file)
             
             processed_files.add(event.src_path)
@@ -333,10 +333,9 @@ if __name__ == "__main__":
             send_LED_brightness(cycle_brightness + 1)
             
             pyautogui.hotkey('ctrl', 'f11', interval=0.1)
-            print("Video recording start.")
+            print(f"Video recording start: scan {cnt_scan + 1}.")
             
             send_ready_signal()
-            start_timer = time.perf_counter()
             while True:
                 line = arduino.readline().decode('utf-8').strip()
                 if line != "":
@@ -352,9 +351,16 @@ if __name__ == "__main__":
 
 
             # Prepare distance data
+            start_timer = time.perf_counter()
+            arduino.reset_input_buffer()
             while distance <= end_distance:
                 if arduino.in_waiting > 0:
-                    line = arduino.readline().decode('utf-8').strip()
+                    
+                    while True:
+                        line = arduino.readline().decode('utf-8').strip()
+                        if line != "":
+                            break
+                        print("help (2)")
                     try:
                         distance = float(line)
                         # print(f"Distance: {distance} meters")
@@ -369,11 +375,16 @@ if __name__ == "__main__":
             send_LED_brightness(0)
             if current_spider_name != "reset":
                 pyautogui.hotkey('ctrl', 'f12', interval=0.1)
-                print("Video recording end.")
+                print(f"Video recording end: scan {cnt_scan + 1}.")
             while distance >= start_distance:
                 if arduino.in_waiting > 0:
-                    line = arduino.readline().decode('utf-8').strip()
+                    # line = arduino.readline().decode('utf-8').strip()
                     # print(line)
+                    while True:
+                        line = arduino.readline().decode('utf-8').strip()
+                        if line != "":
+                            break
+                        print("help (3)")
                     try:
                         distance = abs(float(line))
                         # print(f"Distance: {distance} meters")
@@ -383,8 +394,8 @@ if __name__ == "__main__":
                         send_stop_signal()
             send_stop_signal()
 
-            if current_spider_name != "reset" and num_scans == float("inf") and not cycle_brightness: # last statement creates batched scans
-                print(f'last cycle\'s brightness mod 4: {cycle_brightness}')
+            if current_spider_name != "reset" and num_scans == float("inf") and (cnt_scan % 4 == 3): # last statement creates batched scans
+                print(f'Finished scan {cnt_scan + 1}, waiting for {wait_time} seconds...')
                 time.sleep(wait_time)
 
             cnt_scan += 1
