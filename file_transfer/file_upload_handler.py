@@ -34,7 +34,7 @@ bucket_name = 'spider-videos'
 video_length = 15 # redundant if determined by arduino
 
 # Set waiting time (seconds) between videos
-wait_time = 1200
+wait_time = 600
 
 # Choose whether to delete video upon upload
 delete_video = True
@@ -414,10 +414,11 @@ if __name__ == "__main__":
 
     finally:
         print("Shutting down processes...")
-        shutdown_flag.set()
+        # shutdown_flag.set()
         uploader_thread.join()
         observer.stop()
         observer.join()
         print("Processes stopped.")
 
     print("Reached end of program")
+ 
