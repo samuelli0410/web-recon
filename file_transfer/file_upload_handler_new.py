@@ -6,10 +6,10 @@ import time
 import datetime as datetime
 import pyautogui
 from queue import Queue
-import threading
+# import threading
 import serial
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor
+# from concurrent.futures import ThreadPoolExecutor
 
 
 # HARD LIMITS ON START AND END DISTANCE
@@ -34,7 +34,7 @@ bucket_name = 'spider-videos'
 video_length = 15 # redundant if determined by arduino
 
 # Set waiting time (seconds) between videos
-wait_time = 600
+wait_time = 1200
 
 # Choose whether to delete video upon upload
 delete_video = True
@@ -59,8 +59,10 @@ brightness_dict = {
 
 
 # global records of distance and times
-distance_info = []
-time_info = []
+# distance_info = []
+# time_info = []
+
+upload_batch_size = 4  # number of scans to batch upload
 
 
 def wait_for_arduino():
@@ -125,14 +127,18 @@ def get_size(path):
 processed_files = set()
 
 class UploadEventHandler(FileSystemEventHandler):
-    def __init__(self, upload_queue) -> None:
+    def __init__(self) -> None:
         super(UploadEventHandler, self).__init__()
-        self.upload_queue = upload_queue
+        # self.upload_queue = upload_queue
+        self.upload_queue = []
         self.brightness_counter = 0
+        self.time_info = []
+        self.distance_info = []
 
     def on_created(self, event):
         print(f"Current event: {event.src_path}")
-        time.sleep(25)
+        # time.sleep(25)
+        
         if not event.is_directory and event.src_path.lower().endswith(".mp4") and event.src_path not in processed_files:
             current_brightness = brightness_dict[self.brightness_counter + 1]
             self.brightness_counter = (self.brightness_counter + 1) % 4
@@ -140,39 +146,42 @@ class UploadEventHandler(FileSystemEventHandler):
             # Get timestamp from the file name
             file_name = os.path.basename(event.src_path)
             current_time = file_name.split(".")[0]
-            csv_file_name = f"distance_data {current_time} {current_spider_name} {current_brightness}"
+            csv_file_name = f"{current_spider_name} {current_brightness} distance data {current_time}"
+            self.csv_file_name = csv_file_name
 
-            # Make csv file
-            data_df = pd.DataFrame({"Time": time_info, "Distance": distance_info})
-            print("Distance data sample for", csv_file_name)
-            print(data_df.head())
-            print("Total number of logs:", len(data_df))
-            data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{csv_file_name}.csv")
-            data_df.to_csv(data_file)
-            time_info.clear()
-            distance_info.clear()
-            # time.sleep(5)
-            executor.submit(upload_file, data_file)
+            # # Make csv file
+            # data_df = pd.DataFrame({"Time": self.time_info, "Distance": self.distance_info})
+            # print("Distance data sample for", csv_file_name)
+            # print(data_df.head())
+            # print("Total number of logs:", len(data_df))
+            # data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{csv_file_name}.csv")
+            # data_df.to_csv(data_file)
+            # self.time_info.clear()
+            # self.distance_info.clear()
+            # # time.sleep(5)
+            # # executor.submit(upload_file, data_file)
+            # upload_file(data_file)  # upload csv file
             
             processed_files.add(event.src_path)
             print(f"Detected new file: {event.src_path}")
-            self.upload_queue.put((event.src_path, current_brightness))
+            # self.upload_queue.put((event.src_path, current_brightness))
+            self.upload_queue.append((event.src_path, current_brightness))
             print("Adding to queue...")
-            print("Queue state:", self.upload_queue.queue)
+            print("Queue state:", self.upload_queue)
 
 
-def upload_worker(upload_queue):
-    while not shutdown_flag.is_set():
-        file_path, current_brightness = upload_queue.get()
-        print(f"Uploading {file_path} with brightness {current_brightness}")
-        if file_path is None:
-            break
-        try:
-            upload_file(file_path, brightness=current_brightness)
-        except Exception:
-            print("Error uploading.")
-        finally:
-            upload_queue.task_done()
+# def upload_worker(upload_queue):
+#     while not shutdown_flag.is_set():
+#         file_path, current_brightness = upload_queue.get()
+#         print(f"Uploading {file_path} with brightness {current_brightness}")
+#         if file_path is None:
+#             break
+#         try:
+#             upload_file(file_path, brightness=current_brightness)
+#         except Exception:
+#             print("Error uploading.")
+#         finally:
+#             upload_queue.task_done()
 
 
 def upload_file(file_path, brightness=None):
@@ -186,7 +195,7 @@ def upload_file(file_path, brightness=None):
     try:
         ext = os.path.splitext(file_path)[1]
         if "mp4" in ext:
-            save_name = os.path.basename(file_path).replace(".mp4", "") + " " + current_spider_name + " " + str(brightness) + ".mp4"
+            save_name = current_spider_name + " " + str(brightness) + " " + os.path.basename(file_path)
             print(f"Save name: {save_name}")
         else:  # .csv
             save_name = os.path.basename(file_path)
@@ -294,23 +303,23 @@ if __name__ == "__main__":
     
     current_spider_name, num_scans, start_distance, end_distance = check_input(user_input)
 
-    shutdown_flag = threading.Event()
+    # shutdown_flag = threading.Event()
 
 
     print("Set up the observer")
     path = os.path.expanduser('~/Videos')
-    upload_queue = Queue()
-    event_handler = UploadEventHandler(upload_queue)
+    # upload_queue = Queue()
+    event_handler = UploadEventHandler()
     observer = Observer()
     observer.schedule(event_handler, path, recursive=False)
 
-    executor = ThreadPoolExecutor(max_workers=5)
+    # executor = ThreadPoolExecutor(max_workers=5)
 
     print("Start the observer")
     observer.start()
 
-    uploader_thread = threading.Thread(target=upload_worker, args=(upload_queue,))
-    uploader_thread.start()
+    # uploader_thread = threading.Thread(target=upload_worker, args=(upload_queue,))
+    # uploader_thread.start()
 
     recording_begin_time = time.time()
 
@@ -326,7 +335,7 @@ if __name__ == "__main__":
             if not running:
                 print("Scanning complete.")
                 break
-
+            
             print(f"Scan {cnt_scan + 1}")
             print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
             
@@ -368,8 +377,8 @@ if __name__ == "__main__":
                     try:
                         distance = float(line)
                         # print(f"Distance: {distance} meters")
-                        time_info.append(time.perf_counter() - start_timer)
-                        distance_info.append(distance)
+                        event_handler.time_info.append(time.perf_counter() - start_timer)
+                        event_handler.distance_info.append(distance)
                     except Exception as e:
                         print("Invalid data received (2)")
                         print(e)
@@ -398,27 +407,55 @@ if __name__ == "__main__":
                         send_stop_signal()
             send_stop_signal()
 
+            # Make csv file
+            data_df = pd.DataFrame({"Time": event_handler.time_info, "Distance": event_handler.distance_info})
+            print("Distance data sample for", event_handler.csv_file_name)
+            print(data_df.head())
+            print("Total number of logs:", len(data_df))
+            data_file = os.path.expanduser(f"~/Documents/distance_data_holder/{event_handler.csv_file_name}.csv")
+            data_df.to_csv(data_file)
+            event_handler.time_info.clear()
+            event_handler.distance_info.clear()
+            # time.sleep(5)
+            # executor.submit(upload_file, data_file)
+            upload_file(data_file)  # upload csv file
+
             if current_spider_name != "reset" and num_scans == float("inf") and (cnt_scan % 4 == 3): # last statement creates batched scans
                 print(f'Finished scan {cnt_scan + 1}, waiting for {wait_time} seconds...')
                 time.sleep(wait_time)
 
+
             cnt_scan += 1
             cycle_brightness = (cycle_brightness + 1) % 4
+
+            print("Current queue state:", event_handler.upload_queue)
+            if len(event_handler.upload_queue) == upload_batch_size:
+                print("Batch upload detected.")
+                upload_start_time = time.time()
+
+                while event_handler.upload_queue:
+                    path, current_brightness = event_handler.upload_queue.pop()                    
+                    upload_file(path, brightness=current_brightness)
+                print("Batch upload complete.")
+                upload_end_time = time.time()
+                print(f"Batch upload took {upload_end_time - upload_start_time:.2f} seconds.")
+                reset_position()
+
+                assert not event_handler.upload_queue, "Queue not empty after batch upload."
 
     except KeyboardInterrupt:
         print("KEYBOARD INTERRUPT; FINALIZING UPLOADS...")
         send_stop_signal()
         pyautogui.hotkey('ctrl', 'f12', interval=0.1)
-        shutdown_flag.set()
-        upload_queue.put(None)
+        # shutdown_flag.set()
+        # upload_queue.put(None)
 
     finally:
         print("Shutting down processes...")
         # shutdown_flag.set()
-        uploader_thread.join()
+        # uploader_thread.join()
         observer.stop()
         observer.join()
         print("Processes stopped.")
 
     print("Reached end of program")
- 
