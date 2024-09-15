@@ -10,8 +10,20 @@ import open3d as o3d
 
 from sklearn.linear_model import LinearRegression
 
+cut_front_frames = 400
+cut_back_frames = 200
+
+left_border = 530
+right_border = -550
+top_border = 500 #310
+bottom_border = -30
+
+pixel_threshold = 0.4
+
+
+
 px_per_mm = 4.6
-distance_data = pd.read_csv("distance_data 2024-08-04 04-19-45 @002 255.csv")
+distance_data = pd.read_csv("video_processing/distance_records/@006r 255 distance data 2024-09-12 22-59-36.csv")
 X = distance_data[['Time']].values
 y = distance_data['Distance'].values
 
@@ -32,13 +44,13 @@ def process_frame_grey(frame_data):
     distance = m * timestamp * 1000 * px_per_mm
     # # Assuming the video moves away at a constant rate, calculate border width
     # # Adjust the scale factor according to the rate of moving away
-    frame = frame[300:-50, 520:-540, :] # [top:bottom, left:right] 175
+    frame = frame[top_border:bottom_border, left_border:right_border, :] # [top:bottom, left:right] 175
 
     # Split the frame into RGB channels
     blue_channel, green_channel, red_channel = cv2.split(frame)
 
     # Apply noise reduction or other processing to the green channel
-    #green_channel = cv2.GaussianBlur(green_channel, (0, 0), sigmaX=1)
+    green_channel = cv2.GaussianBlur(green_channel, (0, 0), sigmaX=1)
 
     # Merge the processed channels back into an RGB frame
     processed_frame = cv2.merge([blue_channel, green_channel, red_channel])
@@ -52,17 +64,21 @@ def process_frame_grey(frame_data):
     contrast_enhanced = grayscale_frame
     # Convert to binary image using a normalized threshold of 0.75
     max_pixel_value = np.max(contrast_enhanced)
-    threshold_value = max_pixel_value * 0.60
+    threshold_value = max_pixel_value * pixel_threshold
     _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
 
+    imagelen = len(frame)
     while True:
+        if imagelen <= 0:
+            break
         last_row = binary_image[-1]
         if np.sum(last_row == 255) / len(last_row) > 0.10:
             break
         binary_image = np.roll(binary_image, 1, axis=0)
         binary_image[0] = 0
+        imagelen -= 1
     binary_image = binary_image[::-1, :]
-    binary_image = binary_image[25:, :]
+    binary_image = binary_image[20:, :]
     # Find bright points
     ys, xs = np.where(binary_image == 255)
     points = [(x, y, -distance) for x, y in zip(xs, ys)]
@@ -79,8 +95,8 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
     
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_count = 0
-    ignore_first_frames = 400
-    ignore_last_frames = 100
+    ignore_first_frames = cut_front_frames
+    ignore_last_frames = cut_back_frames
 
     with ProcessPoolExecutor() as executor:
         futures = []
@@ -156,6 +172,6 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
 
 if __name__ == '__main__':
 
-    create_and_visualize_point_cloud(video_path=os.path.expanduser("2024-08-04 04-19-45 @002 255.mp4"),
-                                     dst_dir=os.path.expanduser("~/Documents/spider-recordings"), depth_scale=0.2)
+    create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/@006r 255 2024-09-12 22-59-36.mp4"),
+                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), depth_scale=0.2)
     

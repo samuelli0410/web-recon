@@ -5,3 +5,5 @@ Pipfile.lock
 
 synthetic_web/**
 *.mp4
+*.csv
+*.pcd
