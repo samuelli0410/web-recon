@@ -35,6 +35,65 @@ model.fit(X, y)
 m = model.coef_[0]
 b = model.intercept_
 
+
+def removespider(points: List[Tuple[int, int, float]], threshold: int = 7):
+#    points = [(sub[0], sub[2], sub[1]) for sub in pons]
+    points.sort(key=lambda p: p[1])
+    points.sort(key=lambda p: p[0])
+    points.sort(key=lambda p: p[2])
+
+    prevpointx = 0
+    prevpointy = 0
+    prevpointz = 0
+    currentrowrunning = 0
+
+    removecolumn = set()
+
+
+    for point in points:
+        x, y, z = point
+        if z == prevpointz:
+            if x == prevpointx:
+                #check that it is still the same column
+                if  y >= prevpointy & y <= prevpointy +1: #check that the y is "consectutive"
+                    currentrowrunning += 1
+                    if currentrowrunning >= threshold: #if the consecutive count passes threshhold, add them to the removed list
+                        removecolumn.add((x,z))
+                        currentrowrunning = 0
+                else:
+                    currentrowrunning = 0
+            else:
+                    currentrowrunning = 0
+        else:
+                    currentrowrunning = 0
+        prevpointz = z
+        prevpointx = x
+        prevpointy = y
+
+    def removesomecolumn(points: List[Tuple[int, int, float]], removed: set[Tuple[int, float]]):
+        result = []
+
+        for point in points:
+            x, y, z = point
+            dead = False
+            for remove in removed:
+                a, b = remove
+                if x == a and z == b:
+                    dead = True
+            if not dead:
+                result.append(point)
+            
+        return result
+    
+
+    return removesomecolumn(points, removecolumn)
+
+
+def findspider(points: List[Tuple[int, int, float]], threshold: int = 0):
+    points.sort(key=lambda p: p[0])
+    for point in points:
+        x, y, z = point
+
 def process_frame_grey(frame_data):
     frame, frame_count, depth_scale = frame_data
     print(f"Processing frame {frame_count}")
@@ -82,7 +141,7 @@ def process_frame_grey(frame_data):
     # Find bright points
     ys, xs = np.where(binary_image == 255)
     points = [(x, y, -distance) for x, y in zip(xs, ys)]
-
+    points = removespider(points)
     return points
 
 def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], depth_scale) -> None:
