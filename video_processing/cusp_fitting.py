@@ -76,9 +76,9 @@ x_data = cusp_points[:, 0]
 y_data = cusp_points[:, 2]
 z_data = cusp_points[:, 1]
 # Fit the model to the data
-initial_guess = (1, 1, 1, 1, 1)  # Initial guesses for a, b, c, d, e
+initial_guess = (-100, 1, 1, 1, 500)  # Initial guesses for a, b, c, d, e
 params_opt, params_cov = curve_fit(model_function, (x_data, y_data), z_data, p0=initial_guess)
-
+print(np.linalg.cond(params_cov))
 # Extract fitted parameters
 a_opt, b_opt, c_opt, d_opt, e_opt = params_opt
 print(f"Fitted parameters: a = {a_opt}, b = {b_opt}, c = {c_opt}, d = {d_opt}, e = {e_opt}")

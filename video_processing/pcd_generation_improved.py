@@ -9,6 +9,11 @@ import numpy as np
 import open3d as o3d
 
 from sklearn.linear_model import LinearRegression
+from skimage.morphology import skeletonize
+
+
+def box_boundary():
+    pass
 
 cut_front_frames = 400
 cut_back_frames = 200
@@ -21,22 +26,22 @@ bottom_border = -30
 pixel_threshold = 0.4
 
 
-
 px_per_mm = 4.6
 distance_data = pd.read_csv("video_processing/distance_records/@006r 255 distance data 2024-09-12 22-59-36.csv")
-X = distance_data[['Time']].values
-y = distance_data['Distance'].values
 
-# Create the model and fit it
-model = LinearRegression()
-model.fit(X, y)
+def camera_speed_factor(distance_data: pd.DataFrame):
+    X = distance_data[['Time']].values
+    y = distance_data['Distance'].values
 
-# Get the slope (m) and intercept (b)
-m = model.coef_[0]
-b = model.intercept_
+    model = LinearRegression()
+    model.fit(X, y)
+
+    return model.coef_[0]
+
+m = camera_speed_factor(distance_data)
 
 def process_frame_grey(frame_data):
-    frame, frame_count, depth_scale = frame_data
+    frame, frame_count, _ = frame_data
     print(f"Processing frame {frame_count}")
 
     timestamp = frame_count / 60
@@ -121,39 +126,12 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
     cap.release()
 
     if all_points:
-        # Convert all_points to a NumPy array and visualize
         points_np = np.array(all_points)
         if points_np.ndim == 2 and points_np.shape[1] == 3:
             print(f"Number of points: {points_np.shape[0]}")
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(points_np)
-            # # Assuming 'pcd' is your point cloud of type o3d.geometry.PointCloud
-            # points = np.asarray(pcd.points)
-
-            # # Initialize the KDTree
-            # kdtree = o3d.geometry.KDTreeFlann(pcd)
-
-            # # Parameters
-            # radius = 50.0
-            # min_neighbors = 50
-
-            # # List to hold the indices of points to keep
-            # indices_to_keep = []
-
-            # # Iterate over all points in the point cloud
-            # for i in range(len(points)):
-            #     if i % 10000 == 0:
-            #         print(i)
-            #     # Perform a radius search
-            #     [_, idx, _] = kdtree.search_radius_vector_3d(pcd.points[i], radius)
-
-            #     # Check if the number of neighbors (including the point itself) is greater than or equal to the minimum threshold
-            #     if len(idx) >= min_neighbors:
-            #         indices_to_keep.append(i)
-
-            #     # Filter the point cloud to keep only the points that satisfy the condition
-            # pcd = pcd.select_by_index(indices_to_keep)
-            # o3d.io.write_point_cloud(f"{file_name}.pcd", pcd)
+            pcd = normalize_pcd(pcd)
             video_name = Path(video_path).stem
             if dst_dir is None: # save to the same directory as video
                 file_name = str(Path(video_path).parent / f"{video_name}.pcd")
@@ -170,8 +148,53 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
     else:
         print("No points were added to the point cloud. Check the frame processing logic.")
 
+def voxelize(pcd, voxel_size=1):
+    points = np.asarray(pcd.points)
+    min_bound = points.min(axis=0)
+    max_bound = points.max(axis=0)
+
+    grid_shape = ((max_bound - min_bound) / voxel_size).astype(int) + 1
+    voxel_grid = np.zeros(grid_shape, dtype=int)
+    voxel_indices = ((points - min_bound) / voxel_size).astype(int)
+    voxel_grid[voxel_indices[:, 0], voxel_indices[:, 1], voxel_indices[:, 2]] = 1
+    return voxel_grid
+
+def voxel_to_pcd(voxel_grid: np.ndarray):
+    """Convert 3D voxel grid to point cloud object. ASSUMES VOXEL SIZE OF 1.
+
+    Args:
+        voxel_grid (np.ndarray): 3D voxel grid.
+
+    Returns:
+        o3d.geometry.PointCloud: pcd object.
+    """
+    voxel_indices = np.argwhere(voxel_grid == 1)
+    points = voxel_indices.astype(float)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    return pcd
+
+def normalize_pcd(pcd):
+    points = np.asarray(pcd.points)
+    min_bound = points.min(axis=0)
+    points_normalized = points - min_bound
+    pcd_normalized = o3d.geometry.PointCloud()
+    pcd_normalized.points = o3d.utility.Vector3dVector(points_normalized)
+    return pcd_normalized
+
+
 if __name__ == '__main__':
 
-    create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/@006r 255 2024-09-12 22-59-36.mp4"),
-                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), depth_scale=0.2)
+    # create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/@006r 255 2024-09-12 22-59-36.mp4"),
+    #                                  dst_dir=os.path.expanduser("video_processing/point_clouds"), depth_scale=0.2)
+    pcd = o3d.io.read_point_cloud("video_processing/point_clouds/@006r 255 2024-09-12 22-59-36.pcd")
+    voxel = voxelize(pcd)
+    skeleton = skeletonize(voxel)
+    thin_pcd = voxel_to_pcd(skeleton)
+    o3d.visualization.draw_geometries([pcd])
+    o3d.visualization.draw_geometries([thin_pcd])
+    print(len(pcd.points), len(thin_pcd.points))
+    o3d.io.write_point_cloud("video_processing/point_clouds/thin_test.pcd", thin_pcd)
+    
+
     

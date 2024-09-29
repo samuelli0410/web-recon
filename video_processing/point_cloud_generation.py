@@ -13,31 +13,15 @@ def process_frame_grey(frame_data):
     frame, frame_count, depth_scale = frame_data
     print(f"Processing frame {frame_count}")
 
-    # # Assuming the video moves away at a constant rate, calculate border width
-    # # Adjust the scale factor according to the rate of moving away
-
     frame = frame[300:850, 550:1350]
-
-    # Split the frame into RGB channels
     blue_channel, green_channel, red_channel = cv2.split(frame)
-
-    # Apply noise reduction or other processing to the green channel
+    # Apply noise reduction to the green channel
     green_channel = cv2.GaussianBlur(green_channel, (0, 0), sigmaX=1)
-
-    # Merge the processed channels back into an RGB frame
     processed_frame = cv2.merge([blue_channel, green_channel, red_channel])
-
-    # Convert the processed frame to grayscale
     grayscale_frame = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2GRAY)
-
-    # Enhance contrast selectively using CLAHE
-    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    #contrast_enhanced = clahe.apply(grayscale_frame)
-    contrast_enhanced = grayscale_frame
-    # Convert to binary image using a normalized threshold of 0.75
-    max_pixel_value = np.max(contrast_enhanced)
+    max_pixel_value = np.max(grayscale_frame)
     threshold_value = max_pixel_value * 0.65
-    _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
+    _, binary_image = cv2.threshold(grayscale_frame, threshold_value, 255, cv2.THRESH_BINARY)
 
     # Find bright points
     ys, xs = np.where(binary_image == 255)
