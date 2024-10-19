@@ -8,3 +8,5 @@ synthetic_web/**
 *.csv
 *.pcd
 *.pkl
+*.ply
+*.png
