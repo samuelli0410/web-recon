@@ -280,10 +280,6 @@ class VoxelGridApp:
     def save_cropped_voxel_grid(self):
         pcd = voxel_to_pcd(self.voxel_grid)
         o3d.io.write_point_cloud(file_name, pcd)
-        gui.Application.instance.post_to_main_thread(
-            self.window,
-            lambda: gui.Dialog.show_message("Saved", f"Cropped voxel grid saved to {file_name}")
-        )
 
     def toggle_grid(self):
         self.grid_visible = not self.grid_visible
@@ -295,7 +291,7 @@ class VoxelGridApp:
         # Update the scene
         self._update_scene(self.voxel_grid)
 
-file_name = "video_processing/point_clouds/@014(!005)r 255 2024-10-11 07-06-19.pcd"
+file_name = "video_processing/point_clouds/@015 255 2024-10-08 04-46-18.pcd"
 def main():
     pcd = o3d.io.read_point_cloud(file_name)
     voxel_grid = voxelize(pcd)
