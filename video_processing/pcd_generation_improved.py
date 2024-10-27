@@ -9,25 +9,20 @@ import numpy as np
 import open3d as o3d
 
 from sklearn.linear_model import LinearRegression
-from skimage.morphology import skeletonize
 
 
-def box_boundary():
-    pass
+# axes arrow points towards 0 time
+cut_front_frames = 0#370
+cut_back_frames = 0#400
 
-cut_front_frames = 400
-cut_back_frames = 200
-
-left_border = 530
-right_border = -550
-top_border = 500 #310
-bottom_border = -30
+left_border = 0#530
+right_border = 0#-550
+top_border = 0#500 #310
+bottom_border = 0#-30
 
 pixel_threshold = 0.4
 
-
 px_per_mm = 4.6
-distance_data = pd.read_csv("video_processing/distance_records/!009 255 distance data 2024-10-26 18-18-59.csv")
 
 def camera_speed_factor(distance_data: pd.DataFrame):
     X = distance_data[['Time']].values
@@ -38,69 +33,8 @@ def camera_speed_factor(distance_data: pd.DataFrame):
 
     return model.coef_[0]
 
-m = camera_speed_factor(distance_data)
-
-
-def removespider(points: List[Tuple[int, int, float]], threshold: int = 7):
-#    points = [(sub[0], sub[2], sub[1]) for sub in pons]
-    points.sort(key=lambda p: p[1])
-    points.sort(key=lambda p: p[0])
-    points.sort(key=lambda p: p[2])
-
-    prevpointx = 0
-    prevpointy = 0
-    prevpointz = 0
-    currentrowrunning = 0
-
-    removecolumn = set()
-
-
-    for point in points:
-        x, y, z = point
-        if z == prevpointz:
-            if x == prevpointx:
-                #check that it is still the same column
-                if  y >= prevpointy & y <= prevpointy +1: #check that the y is "consectutive"
-                    currentrowrunning += 1
-                    if currentrowrunning >= threshold: #if the consecutive count passes threshhold, add them to the removed list
-                        removecolumn.add((x,z))
-                        currentrowrunning = 0
-                else:
-                    currentrowrunning = 0
-            else:
-                    currentrowrunning = 0
-        else:
-                    currentrowrunning = 0
-        prevpointz = z
-        prevpointx = x
-        prevpointy = y
-
-    def removesomecolumn(points: List[Tuple[int, int, float]], removed: set[Tuple[int, float]]):
-        result = []
-
-        for point in points:
-            x, y, z = point
-            dead = False
-            for remove in removed:
-                a, b = remove
-                if x == a and z == b:
-                    dead = True
-            if not dead:
-                result.append(point)
-            
-        return result
-    
-
-    return removesomecolumn(points, removecolumn)
-
-
-def findspider(points: List[Tuple[int, int, float]], threshold: int = 0):
-    points.sort(key=lambda p: p[0])
-    for point in points:
-        x, y, z = point
-
 def process_frame_grey(frame_data):
-    frame, frame_count, _ = frame_data
+    frame, frame_count, m = frame_data
     print(f"Processing frame {frame_count}")
 
     timestamp = frame_count / 60
@@ -108,7 +42,7 @@ def process_frame_grey(frame_data):
     distance = m * timestamp * 1000 * px_per_mm
     # # Assuming the video moves away at a constant rate, calculate border width
     # # Adjust the scale factor according to the rate of moving away
-    frame = frame[top_border:bottom_border, left_border:right_border, :] # [top:bottom, left:right] 175
+    #frame = frame[top_border:bottom_border, left_border:right_border, :] # [top:bottom, left:right] 175
 
     # Split the frame into RGB channels
     blue_channel, green_channel, red_channel = cv2.split(frame)
@@ -146,10 +80,11 @@ def process_frame_grey(frame_data):
     # Find bright points
     ys, xs = np.where(binary_image == 255)
     points = [(x, y, -distance) for x, y in zip(xs, ys)]
-    points = removespider(points)
+    #points = removespider(points)
     return points
 
-def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], depth_scale) -> None:
+def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data) -> None:
+    m = camera_speed_factor(distance_data)
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error: Could not open video.")
@@ -167,19 +102,17 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
         while True:
             ret, frame = cap.read()
             if not ret:
-                break  # No more frames to process
+                break
             if frame_count < ignore_first_frames or frame_count >= total_frames - ignore_last_frames:
                 frame_count += 1
                 continue  
 
-            # Submit each frame to be processed as soon as it's read
-            future = executor.submit(process_frame_grey, (frame, frame_count, depth_scale))
+            future = executor.submit(process_frame_grey, (frame, frame_count, m))
             futures.append(future)
             frame_count += 1
-        
-        # Collect results as they become available
+
         for future in futures:
-            points = future.result()  # Blocks until the future is done
+            points = future.result()
             all_points.extend(points)
 
     cap.release()
@@ -192,7 +125,7 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
             pcd.points = o3d.utility.Vector3dVector(points_np)
             pcd = normalize_pcd(pcd)
             video_name = Path(video_path).stem
-            if dst_dir is None: # save to the same directory as video
+            if dst_dir is None: 
                 file_name = str(Path(video_path).parent / f"{video_name}.pcd")
             else:
                 dst_dir = Path(dst_dir)
@@ -200,7 +133,7 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], de
                 file_name = str(dst_dir / f"{video_name}.pcd")
             o3d.io.write_point_cloud(file_name, pcd)
             print(f"Saved point cloud to {dst_dir}.")
-            axes = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1000.0, origin=[0, 0, -1200])
+            axes = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1000.0, origin=[0, 0, 0])
             o3d.visualization.draw_geometries([axes, pcd])
         else:
             print("Error: Points array is not in the expected N by 3 shape.")
@@ -243,18 +176,10 @@ def normalize_pcd(pcd):
 
 
 if __name__ == '__main__':
+    distance_data = pd.read_csv("video_processing/distance_records/@015 255 distance data 2024-10-08 04-46-18.csv")
+    create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/@015 255 2024-10-08 04-46-18.mp4"),
+                                    dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data)
 
-    pcd = create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/!009 255 2024-10-26 18-18-59.mp4"),
-
-                                  dst_dir=os.path.expanduser("video_processing/point_clouds"), depth_scale=0.2)
-    # pcd = o3d.io.read_point_cloud("video_processing/spider_videos/@015 255 2024-10-08 04-46-18.mp4")
-    # voxel = voxelize(pcd)
-    # skeleton = skeletonize(voxel)
-    # thin_pcd = voxel_to_pcd(skeleton)
-    # o3d.visualization.draw_geometries([pcd])
-    # o3d.visualization.draw_geometries([thin_pcd])
-    # print(len(pcd.points), len(thin_pcd.points))
-    # o3d.io.write_point_cloud("video_processing/point_clouds/@015 255.pcd", pcd)
     
 
     
