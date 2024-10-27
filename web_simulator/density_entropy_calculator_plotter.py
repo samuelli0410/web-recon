@@ -2,6 +2,9 @@ import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
 
+# File path
+fp = '../video_processing/point_clouds/thin_test.pcd'
+
 # Step 1: Load the Point Cloud Data (PCD)
 def load_pcd(file_path):
     print("Loading the point cloud...")
@@ -84,7 +87,7 @@ def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdiv
 
 if __name__ == "__main__":
     # Example usage
-    file_path = '../video_processing/point_clouds/thin_test.pcd'
+    file_path = fp 
     points = load_pcd(file_path)
     entropies_including_zero, entropies_excluding_zero = calculate_entropies_for_subdivisions(points)
     
