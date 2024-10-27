@@ -27,7 +27,7 @@ pixel_threshold = 0.4
 
 
 px_per_mm = 4.6
-distance_data = pd.read_csv("video_processing/distance_records/@006r 255 distance data 2024-09-12 22-59-36.csv")
+distance_data = pd.read_csv("video_processing/distance_records/!009 255 distance data 2024-10-26 18-18-59.csv")
 
 def camera_speed_factor(distance_data: pd.DataFrame):
     X = distance_data[['Time']].values
@@ -244,16 +244,17 @@ def normalize_pcd(pcd):
 
 if __name__ == '__main__':
 
-    # create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/@006r 255 2024-09-12 22-59-36.mp4"),
-    #                                  dst_dir=os.path.expanduser("video_processing/point_clouds"), depth_scale=0.2)
-    pcd = o3d.io.read_point_cloud("video_processing/point_clouds/@006r 255 2024-09-12 22-59-36.pcd")
-    voxel = voxelize(pcd)
-    skeleton = skeletonize(voxel)
-    thin_pcd = voxel_to_pcd(skeleton)
-    o3d.visualization.draw_geometries([pcd])
-    o3d.visualization.draw_geometries([thin_pcd])
-    print(len(pcd.points), len(thin_pcd.points))
-    o3d.io.write_point_cloud("video_processing/point_clouds/thin_test.pcd", thin_pcd)
+    pcd = create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/!009 255 2024-10-26 18-18-59.mp4"),
+
+                                  dst_dir=os.path.expanduser("video_processing/point_clouds"), depth_scale=0.2)
+    # pcd = o3d.io.read_point_cloud("video_processing/spider_videos/@015 255 2024-10-08 04-46-18.mp4")
+    # voxel = voxelize(pcd)
+    # skeleton = skeletonize(voxel)
+    # thin_pcd = voxel_to_pcd(skeleton)
+    # o3d.visualization.draw_geometries([pcd])
+    # o3d.visualization.draw_geometries([thin_pcd])
+    # print(len(pcd.points), len(thin_pcd.points))
+    # o3d.io.write_point_cloud("video_processing/point_clouds/@015 255.pcd", pcd)
     
 
     
