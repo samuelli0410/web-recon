@@ -114,7 +114,7 @@ def visualize_density(density_grid):
 # Main function to execute the steps and visualize density distribution
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
-    file_path = "video_processing/point_clouds/@013 255 2024-10-05 03-18-53.pcd"
+    file_path = "video_processing/point_clouds/@016 255 2024-10-08 05-17-46.pcd"
     
     # Step 1: Load the PCD file
     points = load_pcd(file_path)

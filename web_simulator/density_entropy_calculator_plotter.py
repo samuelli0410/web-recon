@@ -26,31 +26,20 @@ def calculate_density_levels(points, num_subdivisions):
     # Calculate the size of each subdivision
     subdivision_size = (max_bound - min_bound) / num_subdivisions
     
-    # Initialize a 3D array to count points in each subregion
-    density_counts = np.zeros((num_subdivisions, num_subdivisions, num_subdivisions), dtype=int)
+    # Initialize the density levels array
+    density_levels = np.zeros(num_subdivisions**3, dtype=int)
     
     # Calculate the density levels
     indices = ((points - min_bound) / subdivision_size).astype(int)
     indices = np.clip(indices, 0, num_subdivisions - 1)  # Ensure indices are within bounds
-    for idx in indices:
-        density_counts[tuple(idx)] += 1
+    flat_indices = np.ravel_multi_index(indices.T, (num_subdivisions, num_subdivisions, num_subdivisions))
+    for idx in flat_indices:
+        density_levels[idx] += 1
     
-    # Flatten the 3D density count array for easier processing
-    flattened_counts = density_counts.flatten()
-    
-    # Normalize the counts by the total number of points to get the density
-    total_points = len(points)
-    densities = flattened_counts / total_points
-    
-    # Classify densities into levels (0-9)
-    density_levels = np.zeros_like(densities, dtype=int)
-    for i, density in enumerate(densities):
-        if density == 0:
-            density_levels[i] = 0  # Level 0 for zero density
-        elif density > 0.005:
-            density_levels[i] = 9  # Level 9 for densities greater than 0.005
-        else:
-            density_levels[i] = int(np.ceil(density / (0.005 / 9)))  # Levels 1 to 9 for non-zero densities
+    # Normalize density levels to be between 0 and 9
+    max_density = density_levels.max()
+    if max_density > 0:
+        density_levels = (density_levels * 9 / max_density).astype(int)
     
     return density_levels
 
