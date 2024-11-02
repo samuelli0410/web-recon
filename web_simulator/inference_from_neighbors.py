@@ -105,7 +105,7 @@ def visualize_inferred_vs_actual(actual_grid, inferred_grid, slice_idx=10):
 # Main function to execute the steps and visualize density distribution
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
-    file_path = "video_processing/point_clouds/!009 255 2024-10-26 18-18-59.pcd"
+    file_path = "video_processing/point_clouds/@012 255 2024-10-04 05-06-11.pcd"
     
     # Step 1: Load the PCD file
     points = load_pcd(file_path)

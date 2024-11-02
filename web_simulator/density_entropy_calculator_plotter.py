@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
-fp = '../video_processing/point_clouds/thin_test.pcd'
+fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
 
 # Step 1: Load the Point Cloud Data (PCD)
 def load_pcd(file_path):
@@ -26,20 +26,31 @@ def calculate_density_levels(points, num_subdivisions):
     # Calculate the size of each subdivision
     subdivision_size = (max_bound - min_bound) / num_subdivisions
     
-    # Initialize the density levels array
-    density_levels = np.zeros(num_subdivisions**3, dtype=int)
+    # Initialize a 3D array to count points in each subregion
+    density_counts = np.zeros((num_subdivisions, num_subdivisions, num_subdivisions), dtype=int)
     
     # Calculate the density levels
     indices = ((points - min_bound) / subdivision_size).astype(int)
     indices = np.clip(indices, 0, num_subdivisions - 1)  # Ensure indices are within bounds
-    flat_indices = np.ravel_multi_index(indices.T, (num_subdivisions, num_subdivisions, num_subdivisions))
-    for idx in flat_indices:
-        density_levels[idx] += 1
+    for idx in indices:
+        density_counts[tuple(idx)] += 1
     
-    # Normalize density levels to be between 0 and 9
-    max_density = density_levels.max()
-    if max_density > 0:
-        density_levels = (density_levels * 9 / max_density).astype(int)
+    # Flatten the 3D density count array for easier processing
+    flattened_counts = density_counts.flatten()
+    
+    # Normalize the counts by the total number of points to get the density
+    total_points = len(points)
+    densities = flattened_counts / total_points
+    
+    # Classify densities into levels (0-9)
+    density_levels = np.zeros_like(densities, dtype=int)
+    for i, density in enumerate(densities):
+        if density == 0:
+            density_levels[i] = 0  # Level 0 for zero density
+        elif density > 0.005:
+            density_levels[i] = 9  # Level 9 for densities greater than 0.005
+        else:
+            density_levels[i] = int(np.ceil(density / (0.005 / 9)))  # Levels 1 to 9 for non-zero densities
     
     return density_levels
 
@@ -65,13 +76,13 @@ def compute_entropy(distribution, exclude_zero=False):
     probabilities = distribution / distribution.sum()
     
     # Compute entropy
-    entropy = -np.sum(probabilities * np.log2(probabilities + 1e-9))  # Add small value to avoid log(0)
+    entropy = -np.sum(probabilities[probabilities > 0] * np.log2(probabilities[probabilities > 0]))
     
     print(f"Computed entropy: {entropy}")
     return entropy
 
 # Step 5: Calculate and record entropies for different subdivisions
-def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=100):
+def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=200):
     entropies_including_zero = []
     entropies_excluding_zero = []
     

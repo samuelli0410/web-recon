@@ -46,7 +46,38 @@ def calculate_density(count_grid, total_points):
     print("Density calculation completed.")
     return density_grid
 
-# Step 4: Visualize Density Distribution in 3D
+# # Step 4: Visualize Density Distribution in 3D
+# def visualize_density(density_grid):
+#     print("Visualizing density distribution...")
+    
+#     # Generate x, y, z coordinates for each block and corresponding density
+#     x, y, z = np.indices(density_grid.shape).reshape(3, -1)
+#     densities = density_grid.flatten()
+    
+#     # Filter out blocks with zero density for visualization
+#     mask = densities > 0
+#     x, y, z, densities = x[mask], y[mask], z[mask], densities[mask]
+    
+#     # Normalize densities for color mapping
+#     norm = Normalize(vmin=densities.min(), vmax=densities.max())
+    
+#     # Plotting the density distribution in 3D with darker colors for higher densities
+#     fig = plt.figure(figsize=(10, 8))
+#     ax = fig.add_subplot(111, projection='3d')
+    
+#     # Use a scatter plot to represent density with color
+#     scatter = ax.scatter(x, y, z, c=densities, cmap='Greys', norm=norm, s=40)
+    
+#     # Add color bar to show density scale
+#     cbar = fig.colorbar(scatter, ax=ax, shrink=1.0, aspect=5)
+#     cbar.set_label('Silk Density')
+    
+#     # Label axes and show plot
+#     ax.set_xlabel("X axis")
+#     ax.set_ylabel("Y axis")
+#     ax.set_zlabel("Z axis")
+#     plt.title("Silk Density Distribution in 3D Space")
+#     plt.show()
 def visualize_density(density_grid):
     print("Visualizing density distribution...")
     
@@ -61,28 +92,29 @@ def visualize_density(density_grid):
     # Normalize densities for color mapping
     norm = Normalize(vmin=densities.min(), vmax=densities.max())
     
-    # Plotting the density distribution in 3D with darker colors for higher densities
+    # Plotting the density distribution in 3D with a reversed high-contrast colormap
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
     
-    # Use a scatter plot to represent density with color
-    scatter = ax.scatter(x, y, z, c=densities, cmap='Greys', norm=norm, s=20)
+    # Use a scatter plot with the reversed colormap 'plasma_r'
+    scatter = ax.scatter(x, y, z, c=densities, cmap='plasma_r', norm=norm, s=40)
     
     # Add color bar to show density scale
-    cbar = fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
+    cbar = fig.colorbar(scatter, ax=ax, shrink=1.0, aspect=5)
     cbar.set_label('Silk Density')
     
     # Label axes and show plot
     ax.set_xlabel("X axis")
     ax.set_ylabel("Y axis")
     ax.set_zlabel("Z axis")
-    plt.title("Silk Density Distribution in 3D Space")
+    plt.title("Silk Density Distribution")
     plt.show()
+
 
 # Main function to execute the steps and visualize density distribution
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
-    file_path = "video_processing/point_clouds/@019 255 2024-10-17 22-05-50.pcd"
+    file_path = "video_processing/point_clouds/@013 255 2024-10-05 03-18-53.pcd"
     
     # Step 1: Load the PCD file
     points = load_pcd(file_path)

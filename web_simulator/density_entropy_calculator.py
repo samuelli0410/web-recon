@@ -98,7 +98,7 @@ def compute_entropy(distribution, exclude_zero=False):
 # Main function to execute the steps
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
-    file_path = "video_processing/point_clouds/!009 255 2024-10-26 18-18-59.pcd"
+    file_path = "video_processing/point_clouds/@013 255 2024-10-05 03-18-53.pcd"
     
     # Step 1: Load the PCD file
     points = load_pcd(file_path)
