@@ -38,6 +38,7 @@ def calculate_density_levels(points, num_subdivisions):
     
     # Normalize density levels to be between 0 and 9
     max_density = density_levels.max()
+    print("max density:", max_density)
     if max_density > 0:
         density_levels = (density_levels * 9 / max_density).astype(int)
     

@@ -20,15 +20,15 @@ def subdivide_and_count(points):
     max_bound = points.max(axis=0)
     
     # Compute the width of each bin (subdivision) along each dimension
-    bin_size = (max_bound - min_bound) / 20.0  # 20 segments per dimension
+    bin_size = (max_bound - min_bound) / 100.0  # 20 segments per dimension
     
     # Initialize a 3D array to count points in each of the 8000 subregions
-    count_grid = np.zeros((20, 20, 20))
+    count_grid = np.zeros((100, 100, 100))
     
     # For each point, determine which subregion (bin) it belongs to
     for point in points:
         indices = np.floor((point - min_bound) / bin_size).astype(int)
-        indices = np.clip(indices, 0, 19)  # Ensure indices stay within bounds
+        indices = np.clip(indices, 0, 99)  # Ensure indices stay within bounds
         count_grid[tuple(indices)] += 1
     
     total_points = len(points)
@@ -85,7 +85,7 @@ def calculate_average_error(actual_grid, inferred_grid):
     return average_error
 
 # Visualization function to compare inferred and actual densities (Optional)
-def visualize_inferred_vs_actual(actual_grid, inferred_grid, slice_idx=10):
+def visualize_inferred_vs_actual(actual_grid, inferred_grid, slice_idx=66):
     # Compare a slice of actual and inferred densities
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
     
@@ -105,7 +105,7 @@ def visualize_inferred_vs_actual(actual_grid, inferred_grid, slice_idx=10):
 # Main function to execute the steps and visualize density distribution
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
-    file_path = "video_processing/point_clouds/@012 255 2024-10-04 05-06-11.pcd"
+    file_path = "video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd"
     
     # Step 1: Load the PCD file
     points = load_pcd(file_path)
@@ -123,4 +123,4 @@ if __name__ == "__main__":
     average_error = calculate_average_error(density_grid, inferred_density_grid)
     
     # Optional visualization to compare inferred and actual densities for a particular slice
-    visualize_inferred_vs_actual(density_grid, inferred_density_grid, slice_idx=10)
+    visualize_inferred_vs_actual(density_grid, inferred_density_grid, slice_idx=66)
