@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
+num_levels = 10  # Specify the number of density levels
 fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
 
 # Step 1: Load the Point Cloud Data (PCD)
@@ -36,19 +37,24 @@ def calculate_density_levels(points, num_subdivisions):
     for idx in flat_indices:
         density_levels[idx] += 1
     
-    # Normalize density levels to be between 0 and 9
+    # Set the 0th level to regions with exactly 0 density, normalize other levels to fit remaining range
     max_density = density_levels.max()
     if max_density > 0:
-        density_levels = (density_levels * 9 / max_density).astype(int)
-    print("density level:", density_levels)
+        nonzero_indices = density_levels > 0
+        density_levels[nonzero_indices] = (density_levels[nonzero_indices] * (num_levels - 1) / max_density).astype(int) + 1
+    
+    # Clip density levels to ensure they fall within [0, num_levels - 1]
+    density_levels = np.clip(density_levels, 0, num_levels - 1)
+    
+    print("Density levels:", density_levels)
     return density_levels
 
 # Step 3: Record the distribution of the density levels
 def record_distribution(density_levels):
     print("Recording the distribution of density levels...")
     
-    # Count how many subregions fall into each density level (0-9)
-    distribution = np.zeros(10, dtype=int)  # 10 levels, from 0 to 9
+    # Count how many subregions fall into each density level
+    distribution = np.zeros(num_levels, dtype=int)
     for level in density_levels:
         distribution[level] += 1
     
@@ -70,6 +76,23 @@ def compute_entropy(distribution, exclude_zero=False):
     print(f"Computed entropy: {entropy}")
     return entropy
 
+def plot_distribution(distribution, exclude_zero=False, label_every_n=5):
+    if exclude_zero:
+        distribution = distribution[1:]  # Exclude level 0 from the plot
+    plt.figure(figsize=(12, 6))
+    x_values = range(1, len(distribution) + 1)  # Start x-axis from level 1
+    bars = plt.bar(x_values, distribution, color="skyblue")
+    plt.xlabel("Density Level (excluding level 0)" if exclude_zero else "Density Level")
+    plt.ylabel("Number of Subregions")
+    plt.title("Distribution of Density Levels (Excluding Level 0)" if exclude_zero else "Distribution of Density Levels")
+
+    # Label every nth bar
+    for i, (bar, count) in enumerate(zip(bars, distribution)):
+        height = bar.get_height()
+        if height > 0 and i % label_every_n == 0:  # Only label every nth bar
+            plt.text(bar.get_x() + bar.get_width() / 2, height, f'{int(count)}', ha='center', va='bottom')
+
+    plt.show()
 
 if __name__ == "__main__":
     # Example usage
@@ -82,3 +105,5 @@ if __name__ == "__main__":
     entropy_excluding_zero = compute_entropy(distribution, exclude_zero=True)
     print(f"Final entropy (including level 0): {entropy_including_zero:.4f}")
     print(f"Final entropy (excluding level 0): {entropy_excluding_zero:.4f}")
+
+    plot_distribution(distribution, exclude_zero=True)
