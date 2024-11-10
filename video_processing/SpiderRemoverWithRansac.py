@@ -19,18 +19,18 @@ start = time.time()
 print("Starting up")
 
 #change these
-cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/PCD Files/Good PCD's/!009 255 2024-10-26 18-18-59.pcd")
+cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/PCD Files/Good PCD's/@031r 255 2024-11-07 23-21-49 (with Spider).pcd")
 
 
 
 #Tolerance is how aggressive you want the parts below RANSAC plane to be cut off --> lower means more cut off
 tolerance = 6
-tolerance2 = 4
+tolerance2 = 3
 # !009 255 2024-10-26 18-18-59 : 4
 
 
 #neighborhood is the radius of the sphere around the spider you want to consider --> higher if shed skin, lower if not
-neighborhood = 150
+neighborhood = 80
 
 
 pcd_arr = np.asarray(cloud.points)
@@ -174,7 +174,7 @@ def skimtop(points: np.ndarray):
         x, y, z = point
 
         # Check if the point is a new unique point based on z and x, or if it's a None value
-        if (z != prevpointz and x != prevpointx) or (z is None and x is None):
+        if (z != prevpointz or x != prevpointx) or (z is None and x is None):
             skimmedtop.append(point)
 
         prevpointx = x
@@ -200,6 +200,24 @@ def RANSACCleanse(spider_segment: np.ndarray, tolerance):
     print("ransac cleansed")
     return np.array(clean_spider_segment)
     
+
+spider_segment_top = skimtop(spider_segment)
+    #RANSAC fitting
+ransac.fit(spider_segment_top[:, [0, 2]], spider_segment_top[:, 1])
+ransac_plane_points = []
+x_range = np.linspace(np.min(AreaSeg[:, 0]), np.max(AreaSeg[:, 0]), num=50)  # 100 points between min and max x
+z_range = np.linspace(np.min(AreaSeg[:, 2]), np.max(AreaSeg[:, 2]), num=50)
+
+#   Iterate over the grid of x and z values
+for x in x_range:
+    for z in z_range:
+        # Predict the corresponding y value using RANSAC
+        y_pred = ransac.predict([[x, z]])  # Predict requires a 2D array
+        # Append the (x, y_pred, z) tuple to the list
+        ransac_plane_points.append((x, y_pred[0], z))
+
+ransac_plane_points_array = np.array(ransac_plane_points)
+
     
 
 # spider_segment_combined = np.vstack((spider_segment, web_segment))
@@ -207,25 +225,29 @@ def RANSACCleanse(spider_segment: np.ndarray, tolerance):
 spider_segment1 = RANSACCleanse(spider_segment, tolerance)
 
 
+
+
+
 def skimbottom(points: np.ndarray):
     # Sort points by z, x, y values
     points_sorted = points[points[:, 2].argsort(kind='mergesort')]  # Sort by z first, then x, then y
     
+    
     # Initialize previous point variables
     prevpointx = prevpointy = prevpointz = None
-    skimedbottom = []
+    skimmedtop = []
 
-    # Iterate through sorted points and filter based on the conditions
-    for point in points_sorted:
+    for point in points:
         x, y, z = point
-        if (z != prevpointz and x != prevpointx) or (z is None and x is None):
-            skimedbottom.append(point)
-        
-        prevpointx = x 
-        prevpointz = z
 
-    # Return the result as a NumPy array
-    return np.array(skimedbottom)
+        # Check if the point is a new unique point based on z and x, or if it's a None value
+        if (z != prevpointz or x != prevpointx) or (z is None and x is None):
+            skimmedtop.append(point)
+
+        prevpointx = x
+        prevpointz = z
+    
+    return np.array(skimmedtop)
 
 
 def linRegCleanse(spider_segment: np.ndarray, spider_segment_Original: np.ndarray, tolerance):
@@ -254,8 +276,9 @@ def linRegCleanse(spider_segment: np.ndarray, spider_segment_Original: np.ndarra
     print("polynomial fitted")
     return np.array(clean_spider_segment)
     
+    
 
-spider_bottom = skimbottom(spider_segment)
+spider_bottom = skimbottom(spider_segment1)
 x = spider_bottom[:, 0]
 y = spider_bottom[:, 1]
 z = spider_bottom[:, 2]
@@ -271,8 +294,7 @@ model.fit(X_poly, y)
 
 polynomialPred = []
 
-x_range = np.linspace(np.min(AreaSeg[:, 0]), np.max(AreaSeg[:, 0]), num=50)  # 100 points between min and max x
-z_range = np.linspace(np.min(AreaSeg[:, 2]), np.max(AreaSeg[:, 2]), num=50)
+
 
 for x in x_range:
     for z in z_range:
@@ -284,14 +306,17 @@ for x in x_range:
         polynomialPred.append((x, y_pred_arbitrary[0], z))
 
 
-spider_segment = linRegCleanse(spider_segment, spider_segmentOriginal, 2)
+spider_segment = linRegCleanse(spider_segment1, spider_segmentOriginal, tolerance2)
 
 
+print(len(spider_segment1))
 
-
+print(len(spider_bottom))
 
 
 spider_segment_combined = np.vstack((spider_segment, web_segment, AreaSeg))
+
+
 
 
 
