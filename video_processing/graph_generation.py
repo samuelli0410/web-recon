@@ -115,10 +115,19 @@ if __name__ == "__main__":
     # args = parser.parse_args()
 
     # generate_graph(file_path=args.src_file, distance_threshold=args.threshold)
-    generate_graph(file_path="video_processing/point_clouds/thin_test.pcd", distance_threshold=2, out_dir="video_processing/graphs/thin_test.pkl")
+    #generate_graph(file_path="video_processing/point_clouds/thin_test.pcd", distance_threshold=2, out_dir="video_processing/graphs/thin_test.pkl")
     with open("video_processing/graphs/thin_test.pkl", "rb") as f:
         graph = pickle.load(f)
-    visualize_graph(graph)
+    # visualize_graph(graph)
+    degrees = [deg for _, deg in graph.degree()]
+
+    # Plot degree distribution as a histogram
+    plt.hist(degrees, bins=range(min(degrees), max(degrees) + 1), edgecolor='black', alpha=0.7)
+    plt.title('Degree Distribution')
+    plt.xlabel('Degree')
+    plt.ylabel('Frequency')
+    plt.grid(True)
+    plt.show()
 
 
 

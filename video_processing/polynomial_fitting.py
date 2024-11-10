@@ -1,5 +1,6 @@
 import open3d as o3d
 import numpy as np
+from scipy.interpolate import Rbf
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
@@ -12,22 +13,20 @@ pcd = o3d.io.read_point_cloud('video_processing/point_clouds/@006r 255 2024-09-1
 # Convert point cloud to numpy array and extract points
 points = np.asarray(pcd.points)
 
-# Assuming the points are organized as (x, y, z)
-x = points[:, 0]
-y = points[:, 1]
-z = points[:, 2]
+# Simplify mesh to improve quality and make it more watertight
+mesh.remove_duplicated_vertices()
+mesh.remove_duplicated_triangles()
+mesh.remove_degenerate_triangles()
+mesh.remove_non_manifold_edges()
 
-# Combine x and z to form the input features for polynomial fitting
-X = np.vstack((x, z)).T
+# Apply Laplacian smoothing to reduce noise while preserving sharp features
+mesh = mesh.filter_smooth_laplacian(number_of_iterations=5)
 
-# Fit a polynomial regression model to predict y
-degree = 4
-poly_features = PolynomialFeatures(degree)
-X_poly = poly_features.fit_transform(X)
+# Recompute normals after smoothing
+mesh.compute_vertex_normals()
 
-# Fit the linear regression model
-model = LinearRegression()
-model.fit(X_poly, y)
+# Set the mesh color to blue
+mesh.paint_uniform_color([0, 0, 1])  # RGB color for blue
 
 # Predict y using the fitted model
 y_pred = model.predict(X_poly)
