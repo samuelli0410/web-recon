@@ -221,28 +221,28 @@ def compute_entropy(distribution, exclude_zero=False):
     return entropy
 
 # Step 5: Calculate and record entropies for different subdivisions
-def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=100):
+def calculate_entropies_for_subdivisions(points, min_subdivisions=5, max_subdivisions=120):
     entropies_including_zero = []
     entropies_excluding_zero = []
+    averages_excluding_zero = []
     
     for num_subdivisions in range(min_subdivisions, max_subdivisions + 1):
         density_levels = calculate_density_levels(points, num_subdivisions)
         distribution = record_distribution(density_levels)
         entropy_including_zero = compute_entropy(distribution, exclude_zero=False)
         entropy_excluding_zero = compute_entropy(distribution, exclude_zero=True)
-        # Append the sliding average of entropies of previous 10 subdivisions and the current one
-        # new_entropy_including_zero = np.mean([x[1] for x in entropies_including_zero[-10:]] + [entropy_including_zero])
-        new_entropy_excluding_zero = np.mean([x[1] for x in entropies_excluding_zero[-10:]] + [entropy_excluding_zero])
+        entropies_excluding_zero.append(entropy_excluding_zero)
+        # Append the sliding average of entropies of previous 5
+        averages_excluding_zero.append((num_subdivisions, np.mean(entropies_excluding_zero[-20:])))
         entropies_including_zero.append((num_subdivisions, entropy_including_zero))
-        entropies_excluding_zero.append((num_subdivisions, new_entropy_excluding_zero))
     
-    return entropies_including_zero, entropies_excluding_zero
+    return entropies_including_zero, averages_excluding_zero
 
 if __name__ == "__main__":
     # Example usage
     file_path = fp 
     points = load_pcd(file_path)
-    entropies_including_zero, entropies_excluding_zero = calculate_entropies_for_subdivisions(points)
+    entropies_including_zero, entropies_excluding_zero,  = calculate_entropies_for_subdivisions(points)
     
     # Plot the results
     subdivisions, entropies_inc = zip(*entropies_including_zero)
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     
     plt.figure()
     plt.plot(subdivisions, entropies_inc, label='Including Level 0')
-    plt.plot(subdivisions, entropies_exc, label='Excluding Level 0')
+    plt.plot(subdivisions, entropies_exc, label='Avg Excluding Level 0')
     plt.xlabel('Number of Subdivisions')
     plt.ylabel('Entropy')
     plt.legend()
