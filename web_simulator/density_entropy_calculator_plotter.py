@@ -118,7 +118,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
-fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
+fp = 'video_processing/point_clouds/@019 255 2024-10-17 22-05-50.pcd'
 num_levels = 10  # Specify the number of density levels
 
 # Step 1: Load the Point Cloud Data (PCD)
@@ -137,8 +137,8 @@ def calculate_density_levels(points, num_subdivisions, num_levels=10):
     
     # Get the bounds of the point cloud
     min_bound = points.min(axis=0)
-    max_bound = points.max(axis=0)
-    
+    # max_bound = points.max(axis=0)
+    max_bound = np.array([1000, 1000, 1000])
     # Calculate the size of each subdivision (voxel)
     subdivision_size = (max_bound - min_bound) / num_subdivisions
     voxel_volume = np.prod(subdivision_size)  # Volume of each voxel in 3D space
@@ -158,16 +158,31 @@ def calculate_density_levels(points, num_subdivisions, num_levels=10):
     # Convert counts to densities by dividing by voxel volume
     density_levels = density_counts / voxel_volume
     
-    # Scale non-zero density levels to fit within [1, num_levels - 1]
+    # # Scale non-zero density levels to fit within [1, num_levels - 1]
+    # max_density = density_levels.max()
+    # print("Max density:", max_density)
+    # if max_density > 0:
+    #     nonzero_indices = density_levels > 0  # Identify non-zero density voxels
+    #     density_levels[nonzero_indices] = (
+    #         (density_levels[nonzero_indices] * (num_levels) / max_density).astype(int) + 1
+    #     )
+    # else:
+    #     density_levels = density_levels.astype(int)  # Convert to int if all densities are zero
+    
+    # # Ensure density levels are within [0, num_levels - 1]
+    # density_levels = np.clip(density_levels, 0, num_levels - 1).astype(int)
+    nonzero_indices = density_levels > 0  # Identify non-zero density voxels
+    # Apply logarithmic scaling
+    # density_levels[nonzero_indices] = np.log1p(density_levels[nonzero_indices])  # log1p for stability
     max_density = density_levels.max()
-    print("Max density:", max_density)
+    print("Max density after log scaling:", max_density)
+    
+    # Scale non-zero density levels to fit within [1, num_levels - 1]
     if max_density > 0:
         nonzero_indices = density_levels > 0  # Identify non-zero density voxels
         density_levels[nonzero_indices] = (
-            (density_levels[nonzero_indices] * (num_levels) / max_density).astype(int) + 1
+            (density_levels[nonzero_indices] * (num_levels - 1) / max_density).astype(int) + 1
         )
-    else:
-        density_levels = density_levels.astype(int)  # Convert to int if all densities are zero
     
     # Ensure density levels are within [0, num_levels - 1]
     density_levels = np.clip(density_levels, 0, num_levels - 1).astype(int)
@@ -206,7 +221,7 @@ def compute_entropy(distribution, exclude_zero=False):
     return entropy
 
 # Step 5: Calculate and record entropies for different subdivisions
-def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=200):
+def calculate_entropies_for_subdivisions(points, min_subdivisions=2, max_subdivisions=100):
     entropies_including_zero = []
     entropies_excluding_zero = []
     
@@ -238,3 +253,4 @@ if __name__ == "__main__":
     plt.legend()
     plt.title('Entropy vs. Number of Subdivisions')
     plt.show()
+            
