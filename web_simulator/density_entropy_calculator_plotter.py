@@ -206,17 +206,20 @@ def compute_entropy(distribution, exclude_zero=False):
     return entropy
 
 # Step 5: Calculate and record entropies for different subdivisions
-def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=200):
+def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=100):
     entropies_including_zero = []
     entropies_excluding_zero = []
     
-    for num_subdivisions in range(min_subdivisions, max_subdivisions + 1, 2):
+    for num_subdivisions in range(min_subdivisions, max_subdivisions + 1):
         density_levels = calculate_density_levels(points, num_subdivisions)
         distribution = record_distribution(density_levels)
         entropy_including_zero = compute_entropy(distribution, exclude_zero=False)
         entropy_excluding_zero = compute_entropy(distribution, exclude_zero=True)
+        # Append the sliding average of entropies of previous 10 subdivisions and the current one
+        # new_entropy_including_zero = np.mean([x[1] for x in entropies_including_zero[-10:]] + [entropy_including_zero])
+        new_entropy_excluding_zero = np.mean([x[1] for x in entropies_excluding_zero[-10:]] + [entropy_excluding_zero])
         entropies_including_zero.append((num_subdivisions, entropy_including_zero))
-        entropies_excluding_zero.append((num_subdivisions, entropy_excluding_zero))
+        entropies_excluding_zero.append((num_subdivisions, new_entropy_excluding_zero))
     
     return entropies_including_zero, entropies_excluding_zero
 
