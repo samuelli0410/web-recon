@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import os
 import pandas as pd
+import pathlib
 
 import cv2
 import numpy as np
@@ -10,6 +11,7 @@ import open3d as o3d
 
 from sklearn.linear_model import LinearRegression
 
+filepath = pathlib.Path(__file__).resolve().parent
 
 # axes arrow points towards 0 time
 cut_front_frames = 0#370
@@ -176,9 +178,12 @@ def normalize_pcd(pcd):
 
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv("video_processing/distance_records/@023 255 distance data 2024-10-26 20-16-38.csv")
-    create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/@023 255 2024-10-26 20-16-38.mp4"),
-                                    dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data)
+    distance_data = pd.read_csv(filepath / "distance_records/@011 255 distance data 2024-10-04 03-20-37.csv")
+    create_and_visualize_point_cloud(
+        video_path=filepath / "spider_videos/@011 255 2024-10-04 03-20-37.mp4",
+        dst_dir=filepath / "point_clouds",
+        distance_data=distance_data,
+    )
 
     
 
