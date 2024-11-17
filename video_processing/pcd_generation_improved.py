@@ -178,9 +178,9 @@ def normalize_pcd(pcd):
 
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv(filepath / "distance_records/@011 255 distance data 2024-10-04 03-20-37.csv")
+    distance_data = pd.read_csv(filepath / "../video_processing/distance_records/@024 255 distance data 2024-10-30 04-10-19.csv")
     create_and_visualize_point_cloud(
-        video_path=filepath / "spider_videos/@011 255 2024-10-04 03-20-37.mp4",
+        video_path=filepath / "../video_processing/spider_videos/@024 255 2024-10-30 04-10-19.mp4",
         dst_dir=filepath / "point_clouds",
         distance_data=distance_data,
     )
