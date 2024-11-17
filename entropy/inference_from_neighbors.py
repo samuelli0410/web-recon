@@ -87,12 +87,16 @@ if __name__ == "__main__":
     parser.add_argument("--q", type=float, default=1.0, help="Power for L^q norm. Default is 1.0.")
     parser.add_argument("--visualize", action="store_true", help="Visualize the inferred density vs original density.")
     parser.add_argument("--plot_p", action="store_true", help="Plot error vs p. Also find the best p.")
+    parser.add_argument("--delta", type=float, default=0.01, help="Step size for p in the plot. Default is 0.01.")
+    parser.add_argument("--max_p", type=float, default=3.0, help="Maximum p for the plot. Default is 3.0.")
     args = parser.parse_args()
 
     path = f"../point_clouds/{args.file_name}.npy"
     num_M = args.num_M
     p = args.p
     q = args.q
+    delta = args.delta
+    max_p = args.max_p
 
     points = load_pcd_array(path)
     density = calculate_density(points, M=num_M)
@@ -104,4 +108,4 @@ if __name__ == "__main__":
         slice_idx = num_M // 2 
         visualize_inferred_vs_actual(density, inferred_density, slice_idx=slice_idx)
     if args.plot_p:
-        plot_error_vs_p(density, q=q, delta=1.0, max_p=200.0)
+        plot_error_vs_p(density, q=q, delta=delta, max_p=max_p)
