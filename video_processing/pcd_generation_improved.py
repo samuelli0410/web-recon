@@ -3,26 +3,32 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import os
 import pandas as pd
+import skimage.io as skio
 
 import cv2
 import numpy as np
 import open3d as o3d
-
+import skimage as sk
+from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
+from scipy.interpolate import interp1d
+
+import matplotlib.pyplot as plt
+import json
 
 
 # axes arrow points towards 0 time
 cut_front_frames = 0#370
 cut_back_frames = 0#400
 
-left_border = 0#530
-right_border = 0#-550
-top_border = 0#500 #310
-bottom_border = 0#-30
+left_border = 530
+right_border = 1380
+top_border = 0
+bottom_border = 560
 
-pixel_threshold = 0.4
+pixel_threshold = 0.55
 
-px_per_mm = 4.6
+px_per_mm = 4.86
 
 def camera_speed_factor(distance_data: pd.DataFrame):
     X = distance_data[['Time']].values
@@ -33,34 +39,34 @@ def camera_speed_factor(distance_data: pd.DataFrame):
 
     return model.coef_[0]
 
-def process_frame_grey(frame_data):
+def process_frame_grey(frame_data, prev_roll, show_brightness=False):
     frame, frame_count, m = frame_data
+    if show_brightness:
+        return
+    original_frame = frame
     print(f"Processing frame {frame_count}")
 
     timestamp = frame_count / 60
-
     distance = m * timestamp * 1000 * px_per_mm
-    # # Assuming the video moves away at a constant rate, calculate border width
-    # # Adjust the scale factor according to the rate of moving away
-    #frame = frame[top_border:bottom_border, left_border:right_border, :] # [top:bottom, left:right] 175
 
-    # Split the frame into RGB channels
     blue_channel, green_channel, red_channel = cv2.split(frame)
 
-    # Apply noise reduction or other processing to the green channel
-    green_channel = cv2.GaussianBlur(green_channel, (0, 0), sigmaX=1)
+    green_channel = cv2.GaussianBlur(green_channel, (5, 5), 1)
 
-    # Merge the processed channels back into an RGB frame
-    processed_frame = cv2.merge([blue_channel, green_channel, red_channel])
+    min_red_blue = np.minimum(red_channel, blue_channel)
 
-    # Convert the processed frame to grayscale
-    grayscale_frame = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2GRAY)
+    blurred_image = cv2.GaussianBlur(min_red_blue, (5, 5), 1)
 
-    # Enhance contrast selectively using CLAHE
-    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    #contrast_enhanced = clahe.apply(grayscale_frame)
-    contrast_enhanced = grayscale_frame
-    # Convert to binary image using a normalized threshold of 0.75
+    green_normalized = green_channel.astype(float) / 255
+    min_red_blue_normalized = blurred_image.astype(float) / 255
+
+    greyscale_combined = (green_normalized + 2 * min_red_blue_normalized) / 3
+
+    grayscale_frame = (greyscale_combined * 255).astype(np.uint8)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    contrast_enhanced = clahe.apply(grayscale_frame)
+
     max_pixel_value = np.max(contrast_enhanced)
     threshold_value = max_pixel_value * pixel_threshold
     _, binary_image = cv2.threshold(contrast_enhanced, threshold_value, 255, cv2.THRESH_BINARY)
@@ -68,22 +74,28 @@ def process_frame_grey(frame_data):
     imagelen = len(frame)
     while True:
         if imagelen <= 0:
+            imagelen = prev_roll
             break
-        last_row = binary_image[-1]
+        last_row = binary_image[imagelen-1]
         if np.sum(last_row == 255) / len(last_row) > 0.10:
             break
-        binary_image = np.roll(binary_image, 1, axis=0)
         binary_image[0] = 0
         imagelen -= 1
+    binary_image = np.roll(binary_image, len(frame) - imagelen, axis=0)
     binary_image = binary_image[::-1, :]
     binary_image = binary_image[20:, :]
-    # Find bright points
+    back_boundary = False
+    binary_image = binary_image[top_border:bottom_border, left_border:right_border]
+    # skio.imshow(binary_image)
+    # skio.show()
+    if binary_image.sum() / binary_image.size > 0.98:
+        back_boundary = True
     ys, xs = np.where(binary_image == 255)
     points = [(x, y, -distance) for x, y in zip(xs, ys)]
     #points = removespider(points)
-    return points
+    return points, imagelen, (back_boundary, -distance)
 
-def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data) -> None:
+def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data, show_brightness=False) -> None:
     m = camera_speed_factor(distance_data)
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -91,33 +103,101 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], di
         return
 
     all_points = []
+    distances = []
     
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_count = 0
     ignore_first_frames = cut_front_frames
     ignore_last_frames = cut_back_frames
+    if show_brightness:
+        with open(crop_file, "r") as f:
+            crop_bounds = json.load(f)
+        x_min = crop_bounds["x_min"]
+        y_min = crop_bounds["y_min"]
+        x_max = crop_bounds["x_max"]
+        y_max = crop_bounds["y_max"]
+        while True:
+            ret, frame = cap.read()
+            
+            if not ret:
+                break
+            
+            if frame_count < ignore_first_frames or frame_count >= total_frames - ignore_last_frames:
+                frame_count += 1
+                continue 
+            ymin = y_min
+            ymax = y_max
+            cropped_frame = frame[-ymax:-ymin, x_min:x_max, :]
+            try:
+                while np.mean(cropped_frame[-1]) < 60:
+                    ymin += 1
+                    ymax += 1
+                    cropped_frame = frame[-ymax:-ymin, x_min:x_max, :]
+            except Exception:
+                cropped_frame = frame[-y_max:-y_min, x_min:x_max, :]
 
-    with ProcessPoolExecutor() as executor:
-        futures = []
+            all_points.append(sk.exposure.rescale_intensity(np.mean(cropped_frame, axis=2), in_range='image', out_range=(0, 256)).astype(np.uint8))
+            print(frame_count)
+            frame_count += 1
+    
+    else:
+        back_boundaries = []
+        prev_roll = 0
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
+            
             if frame_count < ignore_first_frames or frame_count >= total_frames - ignore_last_frames:
                 frame_count += 1
                 continue  
 
-            future = executor.submit(process_frame_grey, (frame, frame_count, m))
-            futures.append(future)
-            frame_count += 1
+            points, new_roll, boundary = process_frame_grey((frame, frame_count, m), prev_roll)
+            if boundary[0]:
+                back_boundaries.append(boundary[1])
+            if new_roll != 0:
+                prev_roll = new_roll
 
-        for future in futures:
-            points = future.result()
             all_points.extend(points)
+            frame_count += 1
+        print(back_boundaries)
+    if show_brightness:
+        timestamps = np.arange(frame_count) / 60
+        distances = m * timestamps * 1000 * px_per_mm
+        z_min, z_max = distances.min(), distances.max()
+        z_resolution = int(z_max - z_min)
+        print(all_points[0].shape)
+        frame_height, frame_width = all_points[0].shape
+        box = np.zeros((z_resolution, frame_height, frame_width))
+        z_positions = np.linspace(z_min, z_max, z_resolution)
+        for y in tqdm(range(frame_height)):
+            for x in range(frame_width):
+                pixel_values = [frame[y, x] for frame in all_points]
+                interp_func = interp1d(distances, pixel_values, bounds_error=False, fill_value=0)
+                box[:, y, x] = interp_func(z_positions)
+        
+        brightness_array = np.transpose(box, (1, 2, 0))
+        print(brightness_array.shape)
+        brightness_array = brightness_array[:, :, -crop_bounds["z_max"]:-crop_bounds["z_min"]]
+        print(brightness_array.shape)
+        print("box created")
+        video_name = Path(video_path).stem
+        if dst_dir is None: 
+            file_name = str(Path(video_path).parent / f"{video_name} brightness.npy")
+        else:
+            dst_dir = Path(dst_dir)
+            dst_dir.mkdir(exist_ok=True)
+            file_name = str(dst_dir / f"{video_name} brightness.npy")
+        np.save(file_name, brightness_array)
+        return
 
     cap.release()
 
     if all_points:
+        z_boundary_min = min(back_boundaries) + 150
+        z_boundary_max = z_boundary_min + 850
+        all_points = [point for point in all_points if z_boundary_min <= point[2] < z_boundary_max]
+
         points_np = np.array(all_points)
         if points_np.ndim == 2 and points_np.shape[1] == 3:
             print(f"Number of points: {points_np.shape[0]}")
@@ -174,12 +254,18 @@ def normalize_pcd(pcd):
     pcd_normalized.points = o3d.utility.Vector3dVector(points_normalized)
     return pcd_normalized
 
+crop_file = "video_processing/crop_data/@013 255 2024-10-05 03-18-53 crop.json"
+
+
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv("video_processing/distance_records/@015 255 distance data 2024-10-08 04-46-18.csv")
-    create_and_visualize_point_cloud(video_path=os.path.expanduser("video_processing/spider_videos/@015 255 2024-10-08 04-46-18.mp4"),
-                                    dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data)
-
+    distance_data = pd.read_csv("video_processing/distance_records/@022(!006) 255 distance data 2024-10-20 03-45-37.csv")
+    video_path = "video_processing/spider_videos/@022(!006) 255 2024-10-20 03-45-37.mp4"
+    create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
+                                    dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
+                                    show_brightness=False)
     
+
+
 
     
