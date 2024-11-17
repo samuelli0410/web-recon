@@ -14,11 +14,11 @@ from sklearn.linear_model import LinearRegression
 filepath = pathlib.Path(__file__).resolve().parent
 
 # axes arrow points towards 0 time
-cut_front_frames = 0#370
-cut_back_frames = 0#400
+cut_front_frames = 370
+cut_back_frames = 400
 
-left_border = 0#530
-right_border = 0#-550
+left_border = 530
+right_border = -550
 top_border = 0#500 #310
 bottom_border = 0#-30
 
