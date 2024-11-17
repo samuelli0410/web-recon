@@ -16,6 +16,7 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import json
 
+filepath = pathlib.Path(__file__).resolve().parent
 
 # axes arrow points towards 0 time
 cut_front_frames = 0#370

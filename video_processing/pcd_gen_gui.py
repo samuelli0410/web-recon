@@ -291,7 +291,7 @@ class VoxelGridApp:
         # Update the scene
         self._update_scene(self.voxel_grid)
 
-file_name = "video_processing/point_clouds/@015 255 2024-10-08 04-46-18.pcd"
+file_name = "video_processing/point_clouds/@013 255 2024-10-05 03-18-53.pcd"
 def main():
     pcd = o3d.io.read_point_cloud(file_name)
     voxel_grid = voxelize(pcd)
