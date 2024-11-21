@@ -15,6 +15,7 @@ from scipy.interpolate import interp1d
 
 import matplotlib.pyplot as plt
 import json
+import boto3
 
 # filepath = pathlib.Path(__file__).resolve().parent
 # filepath = pathlib.Path(__file__).resolve().parent
@@ -31,6 +32,15 @@ bottom_border = 560
 pixel_threshold = 0.55
 
 px_per_mm = 4.86
+
+
+
+
+
+
+
+s3_client = boto3.client('s3')
+bucket_name = 'scanned-objects'
 
 def camera_speed_factor(distance_data: pd.DataFrame):
     X = distance_data[['Time']].values
@@ -98,7 +108,7 @@ def process_frame_grey(frame_data, prev_roll, show_brightness=False):
     #points = removespider(points)
     return points, imagelen, (back_boundary, -distance)
 
-def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data, show_brightness=False) -> None:
+def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data, show_brightness=False, upload_s3=False):
     m = camera_speed_factor(distance_data)
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -218,6 +228,14 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], di
                 file_name = str(dst_dir / f"{video_name}.pcd")
             o3d.io.write_point_cloud(file_name, pcd)
             print(f"Saved point cloud to {dst_dir}.")
+            if upload_s3:
+                try:
+                    object_name = file_name.split("/")[-1]
+                    s3_client.upload_file(file_name, bucket_name, object_name)
+                    print(f"Uploaded {object_name} to {bucket_name}...")
+                except Exception as e:
+                    print(e)
+                    print("Unable to upload...")
             axes = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1000.0, origin=[0, 0, 0])
             o3d.visualization.draw_geometries([axes, pcd])
         else:
@@ -268,7 +286,8 @@ if __name__ == '__main__':
     video_path = "video_processing/spider_videos/@011 255 2024-10-04 03-20-37.mp4"
     create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
-                                    show_brightness=False)
+                                    show_brightness=False,
+                                    upload_s3=True)
     
 
 
