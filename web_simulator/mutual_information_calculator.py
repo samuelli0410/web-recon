@@ -1,3 +1,188 @@
+# import open3d as o3d
+# import numpy as np
+
+# def load_point_cloud(file_path):
+#     print("Loading point cloud data...")
+#     pcd = o3d.io.read_point_cloud(file_path)
+#     points = np.asarray(pcd.points)
+#     if not points.size:
+#         raise ValueError("The point cloud data is empty.")
+#     print(f"Loaded point cloud with {len(points)} points.")
+#     return points
+# def compute_voxel_densities(points, num_subdivisions):
+#     print(f"Computing voxel densities with {num_subdivisions} subdivisions per axis...")
+    
+#     # Compute the bounds of the point cloud
+#     min_bound = points.min(axis=0)
+#     max_bound = points.max(axis=0)
+    
+#     # Compute the size of each voxel
+#     voxel_size = (max_bound - min_bound) / num_subdivisions
+    
+#     # Map points to voxel indices
+#     voxel_indices = ((points - min_bound) / voxel_size).astype(int)
+#     voxel_indices = np.clip(voxel_indices, 0, num_subdivisions - 1)
+    
+#     # Count the number of points in each voxel
+#     densities = np.zeros((num_subdivisions, num_subdivisions, num_subdivisions), dtype=int)
+#     for idx in voxel_indices:
+#         densities[tuple(idx)] += 1
+    
+#     print("Voxel densities computed.")
+#     return densities
+# def discretize_densities(densities, num_levels):
+#     print(f"Discretizing densities into {num_levels} levels...")
+    
+#     # Exclude zero densities (empty voxels) from discretization
+#     non_zero_densities = densities[densities > 0]
+#     if not non_zero_densities.size:
+#         raise ValueError("All voxels are empty.")
+    
+#     # Compute the density thresholds for discretization
+#     min_density = non_zero_densities.min()
+#     max_density = non_zero_densities.max()
+    
+#     # Avoid division by zero
+#     if max_density == min_density:
+#         # All non-zero densities are the same
+#         density_levels = np.zeros_like(densities)
+#         density_levels[densities > 0] = num_levels - 1  # Assign the highest level
+#     else:
+#         # Discretize densities into levels from 1 to num_levels - 1
+#         density_levels = np.zeros_like(densities)
+#         density_levels[densities > 0] = np.ceil(
+#             (densities[densities > 0] - min_density) / (max_density - min_density) * (num_levels - 1)
+#         ).astype(int)
+#         # Ensure levels are within [1, num_levels - 1]
+#         density_levels = np.clip(density_levels, 1, num_levels - 1)
+    
+#     print("Densities discretized.")
+#     return density_levels
+# def compute_joint_marginal_distributions(density_levels):
+#     print("Computing joint and marginal distributions...")
+#     num_subdivisions = density_levels.shape[0]
+    
+#     # Lists to collect the density pairs
+#     voxel_densities = []
+#     neighbor_avg_densities = []
+    
+#     # Iterate over voxels, excluding the boundary voxels
+#     for x in range(1, num_subdivisions - 1):
+#         for y in range(1, num_subdivisions - 1):
+#             for z in range(1, num_subdivisions - 1):
+#                 voxel_density = density_levels[x, y, z]
+#                 if voxel_density == 0:
+#                     continue  # Skip empty voxels
+                
+#                 # Get the density levels of the 6 neighbors
+#                 neighbors = [
+#                     density_levels[x - 1, y, z],
+#                     density_levels[x + 1, y, z],
+#                     density_levels[x, y - 1, z],
+#                     density_levels[x, y + 1, z],
+#                     density_levels[x, y, z - 1],
+#                     density_levels[x, y, z + 1],
+#                 ]
+                
+#                 # Exclude empty neighbors
+#                 non_zero_neighbors = [d for d in neighbors if d > 0]
+#                 if not non_zero_neighbors:
+#                     continue  # Skip if all neighbors are empty
+                
+#                 # Compute the average density level of the neighbors
+#                 neighbor_avg_density = int(round(np.mean(non_zero_neighbors)))
+                
+#                 # Collect the density pair
+#                 voxel_densities.append(voxel_density)
+#                 neighbor_avg_densities.append(neighbor_avg_density)
+    
+#     print(f"Collected {len(voxel_densities)} density pairs.")
+    
+#     # Convert to NumPy arrays
+#     voxel_densities = np.array(voxel_densities)
+#     neighbor_avg_densities = np.array(neighbor_avg_densities)
+    
+#     return voxel_densities, neighbor_avg_densities
+# def compute_mutual_information(voxel_densities, neighbor_avg_densities, num_levels):
+#     print("Computing mutual information...")
+#     # Compute the joint histogram
+#     joint_histogram, _, _ = np.histogram2d(
+#         voxel_densities, neighbor_avg_densities,
+#         bins=num_levels - 1,  # Levels from 1 to num_levels - 1
+#         range=[[1, num_levels - 1], [1, num_levels - 1]]
+#     )
+    
+#     # Compute marginal histograms
+#     voxel_histogram, _ = np.histogram(
+#         voxel_densities,
+#         bins=num_levels - 1,
+#         range=(1, num_levels - 1)
+#     )
+#     neighbor_histogram, _ = np.histogram(
+#         neighbor_avg_densities,
+#         bins=num_levels - 1,
+#         range=(1, num_levels - 1)
+#     )
+    
+#     # Convert histograms to probabilities
+#     joint_prob = joint_histogram / joint_histogram.sum()
+#     voxel_prob = voxel_histogram / voxel_histogram.sum()
+#     neighbor_prob = neighbor_histogram / neighbor_histogram.sum()
+    
+#     # Compute mutual information
+#     mutual_info = 0.0
+#     for i in range(num_levels - 1):
+#         for j in range(num_levels - 1):
+#             p_xy = joint_prob[i, j]
+#             p_x = voxel_prob[i]
+#             p_y = neighbor_prob[j]
+#             if p_xy > 0 and p_x > 0 and p_y > 0:
+#                 mutual_info += p_xy * np.log2(p_xy / (p_x * p_y))
+    
+#     print(f"Mutual information computed: {mutual_info:.6f} bits.")
+#     return mutual_info
+# def main():
+#     # File path to your PCD file
+#     file_path = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
+    
+#     # Parameters
+#     num_levels = 10  # Number of density levels
+#     subdivisions_range = range(100, 121)  # Subdivisions from 100 to 120
+    
+#     # Load point cloud data
+#     points = load_point_cloud(file_path)
+    
+#     # List to store mutual information values
+#     mi_values = []
+    
+#     for num_subdivisions in subdivisions_range:
+#         print(f"\nProcessing with {num_subdivisions} subdivisions...")
+        
+#         # Compute voxel densities
+#         densities = compute_voxel_densities(points, num_subdivisions)
+        
+#         # Discretize densities
+#         density_levels = discretize_densities(densities, num_levels)
+        
+#         # Compute joint and marginal distributions
+#         voxel_densities, neighbor_avg_densities = compute_joint_marginal_distributions(density_levels)
+        
+#         if len(voxel_densities) == 0:
+#             print("No valid density pairs found; skipping this subdivision.")
+#             continue
+        
+#         # Compute mutual information
+#         mutual_info = compute_mutual_information(voxel_densities, neighbor_avg_densities, num_levels)
+#         mi_values.append(mutual_info)
+    
+#     if mi_values:
+#         average_mi = np.mean(mi_values)
+#         print(f"\nAverage mutual information over subdivisions {subdivisions_range.start} to {subdivisions_range.stop - 1}: {average_mi:.6f} bits.")
+#     else:
+#         print("No mutual information values computed.")
+# if __name__ == '__main__':
+#     main()
+
 import open3d as o3d
 import numpy as np
 

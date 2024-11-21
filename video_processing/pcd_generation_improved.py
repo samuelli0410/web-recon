@@ -17,10 +17,11 @@ import matplotlib.pyplot as plt
 import json
 
 # filepath = pathlib.Path(__file__).resolve().parent
+# filepath = pathlib.Path(__file__).resolve().parent
 
 # axes arrow points towards 0 time
-cut_front_frames = 0#370
-cut_back_frames = 0#400
+cut_front_frames = 370
+cut_back_frames = 400
 
 left_border = 530
 right_border = 1380
@@ -269,7 +270,6 @@ if __name__ == '__main__':
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
                                     show_brightness=False)
     
-
 
 
     
