@@ -17,10 +17,11 @@ import matplotlib.pyplot as plt
 import json
 
 # filepath = pathlib.Path(__file__).resolve().parent
+# filepath = pathlib.Path(__file__).resolve().parent
 
 # axes arrow points towards 0 time
-cut_front_frames = 370
-cut_back_frames = 400
+cut_front_frames = 0
+cut_back_frames = 0
 
 left_border = 530
 right_border = 1380
@@ -89,6 +90,7 @@ def process_frame_grey(frame_data, prev_roll, show_brightness=False):
     binary_image = binary_image[top_border:bottom_border, left_border:right_border]
     # skio.imshow(binary_image)
     # skio.show()
+    print(binary_image.sum() / binary_image.size)
     if binary_image.sum() / binary_image.size > 0.98:
         back_boundary = True
     ys, xs = np.where(binary_image == 255)
@@ -195,6 +197,8 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], di
     cap.release()
 
     if all_points:
+        if len(back_boundaries) == 0:
+            back_boundaries.append(min([point[2] for point in all_points]))
         z_boundary_min = min(back_boundaries) + 150
         z_boundary_max = z_boundary_min + 850
         all_points = [point for point in all_points if z_boundary_min <= point[2] < z_boundary_max]
@@ -261,13 +265,11 @@ crop_file = "video_processing/crop_data/@013 255 2024-10-05 03-18-53 crop.json"
 
 if __name__ == '__main__':
     distance_data = pd.read_csv("video_processing/distance_records/@011 255 distance data 2024-10-04 03-20-37.csv")
-    create_and_visualize_point_cloud(
-        video_path="video_processing/spider_videos/@011 255 2024-10-04 03-20-37.mp4",
-        dst_dir="video_processing/point_clouds",
-        distance_data=distance_data,
-        show_brightness=False
-    )
-
+    video_path = "video_processing/spider_videos/@011 255 2024-10-04 03-20-37.mp4"
+    create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
+                                    dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
+                                    show_brightness=False)
+    
 
 
     
