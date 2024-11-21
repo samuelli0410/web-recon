@@ -20,8 +20,8 @@ import json
 # filepath = pathlib.Path(__file__).resolve().parent
 
 # axes arrow points towards 0 time
-cut_front_frames = 370
-cut_back_frames = 400
+cut_front_frames = 0
+cut_back_frames = 0
 
 left_border = 530
 right_border = 1380
@@ -90,7 +90,7 @@ def process_frame_grey(frame_data, prev_roll, show_brightness=False):
     binary_image = binary_image[top_border:bottom_border, left_border:right_border]
     # skio.imshow(binary_image)
     # skio.show()
-    print(binary_image.sum() / binary_image.size)
+    #print(binary_image.sum() / binary_image.size)
     if binary_image.sum() / binary_image.size > 0.98:
         back_boundary = True
     ys, xs = np.where(binary_image == 255)
