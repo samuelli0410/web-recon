@@ -282,8 +282,8 @@ crop_file = "video_processing/crop_data/@013 255 2024-10-05 03-18-53 crop.json"
 
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv("video_processing/distance_records/@011 255 distance data 2024-10-04 03-20-37.csv")
-    video_path = "video_processing/spider_videos/@011 255 2024-10-04 03-20-37.mp4"
+    distance_data = pd.read_csv("video_processing/distance_records/@044 255 distance data 2024-11-19 03-16-53.csv")
+    video_path = "video_processing/spider_videos/@044 255 2024-11-19 03-16-53.mp4"
     create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
                                     show_brightness=False,

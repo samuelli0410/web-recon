@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
-fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
+fp = 'video_processing/point_clouds/@044 255 2024-11-19 03-16-53.pcd'
 num_levels = 10  # Specify the number of density levels
 
 # Step 1: Load the Point Cloud Data (PCD)
@@ -117,5 +117,6 @@ if __name__ == "__main__":
     # Plot the results
     subdivisions, entropies_inc = zip(*entropies_including_zero)
     _, entropies_exc = zip(*entropies_excluding_zero)
-    
+    _, entropies_inc = zip(*entropies_including_zero)
+    print("Final entropy avg with level 0: ", entropies_inc[-1])
     print("Final entropy avg: ", entropies_exc[-1])
