@@ -16,31 +16,40 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import json
 import boto3
-
-# filepath = pathlib.Path(__file__).resolve().parent
-# filepath = pathlib.Path(__file__).resolve().parent
+from dataclasses import dataclass
 
 # axes arrow points towards 0 time
 cut_front_frames = 0
 cut_back_frames = 0
 
-left_border = 530
-right_border = 1380
-top_border = 0
-bottom_border = 560
+@dataclass(frozen=True)
+class BOX_FOUR_INCH:
+    left_border = 530
+    right_border = 1380
+    top_border = 0
+    bottom_border = 560
+
+    box_depth = 850
+
+@dataclass(frozen=True)
+class BOX_THREE_INCH:
+    left_border = 750
+    right_border = 1380
+    top_border = 0
+    bottom_border = 440
+
+    box_depth = 630
+
 
 pixel_threshold = 0.55
 
 px_per_mm = 4.86
 
 
-
-
-
-
-
 s3_client = boto3.client('s3')
 bucket_name = 'scanned-objects'
+crop_file = "video_processing/crop_data/@013 255 2024-10-05 03-18-53 crop.json" # IGNORE
+
 
 def camera_speed_factor(distance_data: pd.DataFrame):
     X = distance_data[['Time']].values
@@ -51,7 +60,7 @@ def camera_speed_factor(distance_data: pd.DataFrame):
 
     return model.coef_[0]
 
-def process_frame_grey(frame_data, prev_roll, show_brightness=False):
+def process_frame_grey(frame_data, prev_roll, show_brightness=False, box=BOX_FOUR_INCH):
     frame, frame_count, m = frame_data
     if show_brightness:
         return
@@ -97,18 +106,15 @@ def process_frame_grey(frame_data, prev_roll, show_brightness=False):
     binary_image = binary_image[::-1, :]
     binary_image = binary_image[20:, :]
     back_boundary = False
-    binary_image = binary_image[top_border:bottom_border, left_border:right_border]
-    # skio.imshow(binary_image)
-    # skio.show()
-    #print(binary_image.sum() / binary_image.size)
+    binary_image = binary_image[box.top_border:box.bottom_border, box.left_border:box.right_border]
     if binary_image.sum() / binary_image.size > 0.98:
         back_boundary = True
     ys, xs = np.where(binary_image == 255)
     points = [(x, y, -distance) for x, y in zip(xs, ys)]
-    #points = removespider(points)
     return points, imagelen, (back_boundary, -distance)
 
-def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data, show_brightness=False, upload_s3=False):
+def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data, show_brightness=False,
+                                     upload_s3=False, box=BOX_FOUR_INCH):
     m = camera_speed_factor(distance_data)
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -165,7 +171,7 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], di
                 frame_count += 1
                 continue  
 
-            points, new_roll, boundary = process_frame_grey((frame, frame_count, m), prev_roll)
+            points, new_roll, boundary = process_frame_grey((frame, frame_count, m), prev_roll, box=box)
             if boundary[0]:
                 back_boundaries.append(boundary[1])
             if new_roll != 0:
@@ -210,7 +216,7 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], di
         if len(back_boundaries) == 0:
             back_boundaries.append(min([point[2] for point in all_points]))
         z_boundary_min = min(back_boundaries) + 150
-        z_boundary_max = z_boundary_min + 850
+        z_boundary_max = z_boundary_min + box.box_depth
         all_points = [point for point in all_points if z_boundary_min <= point[2] < z_boundary_max]
 
         points_np = np.array(all_points)
@@ -277,17 +283,18 @@ def normalize_pcd(pcd):
     pcd_normalized.points = o3d.utility.Vector3dVector(points_normalized)
     return pcd_normalized
 
-crop_file = "video_processing/crop_data/@013 255 2024-10-05 03-18-53 crop.json"
+
 
 
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv("video_processing/distance_records/@011 255 distance data 2024-10-04 03-20-37.csv")
-    video_path = "video_processing/spider_videos/@011 255 2024-10-04 03-20-37.mp4"
+    distance_data = pd.read_csv("video_processing/distance_records/@032 255 distance data 2024-11-08 04-05-31.csv")
+    video_path = "video_processing/spider_videos/@032 255 2024-11-08 04-05-31.mp4"
     create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
                                     show_brightness=False,
-                                    upload_s3=True)
+                                    upload_s3=False,
+                                    box=BOX_THREE_INCH)
     
 
 
