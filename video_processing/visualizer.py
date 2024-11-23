@@ -13,5 +13,5 @@ def visualize_pcd(file_path):
     o3d.visualization.draw_geometries([pcd])
 
 # Replace 'your_file.pcd' with the path to your PCD file
-file_path = "video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd"
+file_path = "video_processing/point_clouds/@025 255 2024-10-30 05-33-01.pcd"
 visualize_pcd(file_path)

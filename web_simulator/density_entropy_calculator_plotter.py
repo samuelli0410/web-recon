@@ -118,7 +118,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
-fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
+fp = 'video_processing/point_clouds/@035 255 2024-11-12 06-01-06.pcd'
 num_levels = 10  # Specify the number of density levels
 
 # Step 1: Load the Point Cloud Data (PCD)
