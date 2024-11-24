@@ -1,7 +1,7 @@
 import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
-from density_entropy_calculator import load_pcd, calculate_density_levels, record_distribution, compute_entropy, calculate_entropies_for_subdivisions
+from cubes_density_entropy_calculator import load_pcd, calculate_density_levels, record_distribution, compute_entropy, calculate_entropies_for_subdivisions
 import os
 import csv
 from natsort import natsorted
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     
     # Create the output csv
     rows = zip(web_names, species_list, entropies_with_zero, entropies_without_zero)
-    with open("output.csv", "w", newline="") as file:
+    with open("output_cubes.csv", "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Sample ID", "Species", "H in bits", "H (Excl. Level 0 in bits)"])  # Header
         writer.writerows(rows)
