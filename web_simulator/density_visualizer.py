@@ -21,15 +21,15 @@ def subdivide_and_count(points):
     max_bound = points.max(axis=0)
     
     # Compute the width of each bin (subdivision) along each dimension
-    bin_size = (max_bound - min_bound) / 20.0  # 20 segments per dimension
+    bin_size = (max_bound - min_bound) / num_subdivisions  # 20 segments per dimension
     
     # Initialize a 3D array to count points in each of the 8000 subregions
-    count_grid = np.zeros((20, 20, 20))
+    count_grid = np.zeros((num_subdivisions, num_subdivisions, num_subdivisions))
     
     # For each point, determine which subregion (bin) it belongs to
     for point in points:
         indices = np.floor((point - min_bound) / bin_size).astype(int)
-        indices = np.clip(indices, 0, 19)  # Ensure indices stay within bounds
+        indices = np.clip(indices, 0, num_subdivisions - 1)  # Ensure indices stay within bounds
         count_grid[tuple(indices)] += 1
     
     total_points = len(points)
@@ -115,7 +115,7 @@ def visualize_density(density_grid):
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
     file_path = "video_processing/point_clouds/@021 255 2024-10-20 02-20-12.pcd"
-    
+    num_subdivisions = 100
     # Step 1: Load the PCD file
     points = load_pcd(file_path)
     
