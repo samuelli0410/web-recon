@@ -1,0 +1,1 @@
+folder for brightness arrays corresponding to videos

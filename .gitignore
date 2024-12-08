@@ -10,3 +10,4 @@ synthetic_web/**
 *.pkl
 *.ply
 *.png
+*.npy
