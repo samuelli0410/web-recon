@@ -294,7 +294,7 @@ if __name__ == '__main__':
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
                                     show_brightness=False,
                                     upload_s3=False,
-                                    box=BOX_THREE_INCH)
+                                    box=BOX_FOUR_INCH)
     
 
 
