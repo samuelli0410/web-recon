@@ -118,7 +118,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
-fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
+fp = 'video_processing/point_clouds/@014(!005) 255 2024-10-10 06-44-38.pcd'
 num_levels = 10  # Specify the number of density levels
 
 # Step 1: Load the Point Cloud Data (PCD)
@@ -206,7 +206,7 @@ def compute_entropy(distribution, exclude_zero=False):
     return entropy
 
 # Step 5: Calculate and record entropies for different subdivisions
-def calculate_entropies_for_subdivisions(points, min_subdivisions=5, max_subdivisions=120):
+def calculate_entropies_for_subdivisions(points, min_subdivisions=5, max_subdivisions=200):
     entropies_including_zero = []
     entropies_excluding_zero = []
     averages_excluding_zero = []

@@ -24,17 +24,21 @@ def calculate_density_levels(points, num_subdivisions, num_levels=10):
     min_bound = points.min(axis=0)
     max_bound = points.max(axis=0)
     
+    # Adjust subdivisions for the second axis (index 1) to be 3/4 the original subdivisions
+    adjusted_subdivisions = np.copy(np.array([num_subdivisions, num_subdivisions, num_subdivisions]))
+    adjusted_subdivisions[1] = int(np.round(num_subdivisions * 3 / 4))
+    
     # Calculate the size of each subdivision (voxel)
-    subdivision_size = (max_bound - min_bound) / num_subdivisions
+    subdivision_size = (max_bound - min_bound) / adjusted_subdivisions
     voxel_volume = np.prod(subdivision_size)  # Volume of each voxel in 3D space
 
     # Initialize array to store density counts per voxel
-    density_counts = np.zeros(num_subdivisions**3, dtype=float)
+    density_counts = np.zeros(np.prod(adjusted_subdivisions), dtype=float)
     
     # Calculate voxel indices for each point
     indices = ((points - min_bound) / subdivision_size).astype(int)
-    indices = np.clip(indices, 0, num_subdivisions - 1)
-    flat_indices = np.ravel_multi_index(indices.T, (num_subdivisions, num_subdivisions, num_subdivisions))
+    indices = np.clip(indices, 0, adjusted_subdivisions - 1)
+    flat_indices = np.ravel_multi_index(indices.T, adjusted_subdivisions)
     
     # Count points in each voxel
     for idx in flat_indices:
