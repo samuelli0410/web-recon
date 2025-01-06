@@ -2,17 +2,12 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import open3d as o3d
 from sklearn.cluster import DBSCAN
-from matplotlib import colormaps
-from matplotlib.widgets import CheckButtons
 from scipy.spatial import KDTree
 import random
 from scipy.spatial import distance
 import time
-import ipywidgets as widgets
-from IPython.display import display
 
 
 start = time.time()
@@ -73,7 +68,7 @@ def compactize(input_array, radius):
     linepoints = np.array(linepoints)
     mask = np.array([i not in rows_to_remove for i in range(len(input_array))])
     filtered_array = np.concatenate((input_array[mask], linepoints), axis=0)
-    # ax.scatter(filtered_array[:, 0], filtered_array[:, 1], filtered_array[:, 2], s=10)
+
     print("compactized.")
     return filtered_array
 
@@ -392,12 +387,11 @@ def segmenterTrial(EPS, pointcloud):
 
     for label in unique_labels:
         print(f"{label}/{len(unique_labels)}")
+
         # Points belonging to this cluster
         if label == -1:
             continue
         cluster_points = pcd_arr[labels == label]
-        
-        # ax.scatter(cluster_points[:, 0], cluster_points[:, 1], cluster_points[:, 2], s=0.1)
         
         ConnectSegment(cluster_points, EPS)
 
@@ -405,16 +399,22 @@ def segmenterTrial(EPS, pointcloud):
 
     
 
+def main():
+
+    pointcloud = "C:/Users/samue/Downloads/Research/PCD Files/TestingPCD/sparse3 255 2024-11-30 11-29-33.pcd"
+    #Make sure EPS ∈ (0, 500] - the model is scaled to 500 preprocessing and reverted afterwards. 
+    EPS = 120
+
+    segmenterTrial(EPS,  pointcloud)
+
+    ax.set_xlabel("X-axis")
+    ax.set_ylabel("Y-axis")
+    ax.set_zlabel("Z-axis")
+    plt.show()
 
 
-pcd_arr = segmenterTrial(120,  "C:/Users/samue/Downloads/Research/PCD Files/TestingPCD/sparse3 255 2024-11-30 11-29-33.pcd")
+
+if __name__ == "__main__":
+    main()
 
 
-
-
-
-
-ax.set_xlabel("X-axis")
-ax.set_ylabel("Y-axis")
-ax.set_zlabel("Z-axis")
-plt.show()
