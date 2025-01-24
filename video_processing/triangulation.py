@@ -5,6 +5,8 @@ from scipy.spatial import Delaunay
 from scipy.spatial import KDTree
 import random
 from collections import defaultdict
+from scipy.spatial import ConvexHull, QhullError
+from tqdm import tqdm
 
 
 def cluster_points_in_xz(points, radius):
@@ -428,6 +430,39 @@ def filter_overconnected_triangles(mesh):
         print("No overconnected edges found.")
         return mesh  # No overconnected edges; return the original mesh
     print(f"Found {len(overconnected_edges)} overconnected edges.")
+
+    lines = []
+    for edge in overconnected_edges:
+        lines.append(edge)
+
+    highlighted_triangles = set()
+    for tris in overconnected_edges.values():
+        highlighted_triangles.update(tris)
+    
+    # Create a LineSet for edges
+    lineset = o3d.geometry.LineSet()
+    lineset.points = o3d.utility.Vector3dVector(vertices)
+    lineset.lines = o3d.utility.Vector2iVector(np.array(lines, dtype=int))
+
+    # Assign color to edges (red)
+    edge_colors = [[1, 0, 0] for _ in lines]
+    lineset.colors = o3d.utility.Vector3dVector(edge_colors)
+
+    # Create a new mesh for triangles
+    triangle_vertices = vertices
+    triangle_indices = [triangles[i] for i in highlighted_triangles]
+    triangle_colors = np.array([[1, 0, 0] for _ in highlighted_triangles])  # Red for highlighted triangles
+    
+    highlighted_mesh = o3d.geometry.TriangleMesh()
+    highlighted_mesh.vertices = o3d.utility.Vector3dVector(triangle_vertices)
+    highlighted_mesh.triangles = o3d.utility.Vector3iVector(triangle_indices)
+    highlighted_mesh.vertex_colors = o3d.utility.Vector3dVector(
+        np.zeros_like(triangle_vertices))  # Default to black for unused vertices
+    highlighted_mesh.paint_uniform_color([1, 0, 0])
+
+    o3d.visualization.draw_geometries([mesh, lineset, highlighted_mesh])
+
+
     # Step 4: Count neighboring triangles for each triangle
     triangle_neighbors = defaultdict(set)
     for edge, tris in edge_to_triangles.items():
@@ -452,27 +487,386 @@ def filter_overconnected_triangles(mesh):
     new_mesh.triangles = o3d.utility.Vector3iVector(remaining_triangles)
     return new_mesh
 
+def visualize_mesh_with_fixed_colors(mesh):
+    """
+    Visualize the mesh with each triangle assigned a color from a fixed set (red, yellow, green, blue, purple).
+
+    Args:
+        mesh (o3d.geometry.TriangleMesh): The input triangular mesh.
+
+    Returns:
+        o3d.geometry.TriangleMesh: The mesh with colored triangles.
+    """
+    # Step 1: Extract vertices and triangles
+    vertices = np.asarray(mesh.vertices)
+    triangles = np.asarray(mesh.triangles)
+    
+    # Step 2: Define fixed colors
+    fixed_colors = np.array([
+        [1, 0, 0],   # Red
+        [1, 1, 0],   # Yellow
+        [0, 1, 0],   # Green
+        [0, 0, 1],   # Blue
+        [0.5, 0, 0.5]  # Purple
+    ])
+    num_colors = len(fixed_colors)
+
+    # Step 3: Assign colors to vertices based on triangle colors
+    vertex_colors = np.zeros_like(vertices)
+    vertex_color_counts = np.zeros(len(vertices))  # To average colors for shared vertices
+
+    for i, tri in enumerate(triangles):
+        color = fixed_colors[i % num_colors]  # Cycle through fixed colors
+        for vertex_idx in tri:
+            vertex_colors[vertex_idx] += color
+            vertex_color_counts[vertex_idx] += 1
+
+    # Normalize vertex colors by averaging for shared vertices
+    vertex_colors /= vertex_color_counts[:, None]
+
+    # Step 4: Create a new mesh with colored vertices
+    colored_mesh = o3d.geometry.TriangleMesh()
+    colored_mesh.vertices = mesh.vertices
+    colored_mesh.triangles = mesh.triangles
+    colored_mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)
+    
+    return colored_mesh
+
+
+def remove_negative_y_normals(mesh):
+    """
+    Removes triangles from the mesh that have normals pointing in the negative y-direction.
+
+    Args:
+        mesh (o3d.geometry.TriangleMesh): The input triangular mesh.
+
+    Returns:
+        o3d.geometry.TriangleMesh: The filtered triangular mesh.
+    """
+    # Step 1: Compute triangle normals
+    mesh.compute_triangle_normals()
+    triangle_normals = np.asarray(mesh.triangle_normals)
+
+    # Step 2: Identify triangles with normals pointing in the negative y-direction
+    valid_triangles = [
+        i for i, normal in enumerate(triangle_normals) if normal[1] >= 0
+    ]
+
+    # Step 3: Filter the triangles and rebuild the mesh
+    triangles = np.asarray(mesh.triangles)
+    vertices = np.asarray(mesh.vertices)
+    filtered_triangles = triangles[valid_triangles]
+
+    # Create a new mesh
+    filtered_mesh = o3d.geometry.TriangleMesh()
+    filtered_mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    filtered_mesh.triangles = o3d.utility.Vector3iVector(filtered_triangles)
+    
+    return filtered_mesh
+
+def visualize_topographical_map_multi_color(mesh):
+    """
+    Visualizes the mesh as a topographical map with a smooth gradient transitioning
+    through red, yellow, green, blue, and purple based on y-coordinates.
+
+    Args:
+        mesh (o3d.geometry.TriangleMesh): The input triangular mesh.
+
+    Returns:
+        o3d.geometry.TriangleMesh: The topographically colored mesh with a multi-color gradient.
+    """
+    # Step 1: Extract vertex coordinates
+    vertices = np.asarray(mesh.vertices)
+
+    # Step 2: Normalize y-coordinates to [0, 1]
+    y_coords = vertices[:, 1]
+    min_y, max_y = np.min(y_coords), np.max(y_coords)
+    normalized_y = (y_coords - min_y) / (max_y - min_y)
+
+    # Step 3: Map normalized y-coordinates to colors in the multi-color gradient
+    colors = np.zeros((len(vertices), 3))
+    for i, value in enumerate(normalized_y):
+        if value < 0.25:  # Red to Yellow
+            t = value / 0.25
+            colors[i] = [1, t, 0]
+        elif value < 0.5:  # Yellow to Green
+            t = (value - 0.25) / 0.25
+            colors[i] = [1 - t, 1, 0]
+        elif value < 0.75:  # Green to Blue
+            t = (value - 0.5) / 0.25
+            colors[i] = [0, 1 - t, t]
+        else:  # Blue to Purple
+            t = (value - 0.75) / 0.25
+            colors[i] = [t, 0, 1]
+
+    # Step 4: Assign vertex colors to the mesh
+    multi_color_mesh = o3d.geometry.TriangleMesh()
+    multi_color_mesh.vertices = mesh.vertices
+    multi_color_mesh.triangles = mesh.triangles
+    multi_color_mesh.vertex_colors = o3d.utility.Vector3dVector(colors)
+
+    return multi_color_mesh
+
+def highlight_and_visualize_intersecting_triangles(mesh):
+    """
+    Highlights intersecting triangles in red and visualizes the mesh.
+
+    Args:
+        mesh (o3d.geometry.TriangleMesh): The input triangular mesh.
+    """
+    # Step 1: Detect intersecting triangles
+    intersecting_triangles = mesh.get_self_intersecting_triangles()
+    print("Number of intersecting triangles:", len(intersecting_triangles))
+    num_vertices = len(mesh.vertices)
+    vertex_colors = np.ones((num_vertices, 3))  # Default to white for all vertices
+
+    # Highlight vertices of intersecting triangles in red
+    triangles = np.asarray(mesh.triangles)
+    for idx in intersecting_triangles:
+        triangle = triangles[idx]
+        for vertex_idx in triangle:
+            vertex_colors[vertex_idx] = [1, 0, 0]  # Red color for vertices of intersecting triangles
+
+    # Step 3: Create a new mesh and assign vertex colors
+    colored_mesh = o3d.geometry.TriangleMesh()
+    colored_mesh.vertices = mesh.vertices
+    colored_mesh.triangles = mesh.triangles
+    colored_mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)
+
+    colored_mesh.compute_vertex_normals()
+
+    # Step 4: Visualize the mesh
+    o3d.visualization.draw_geometries([colored_mesh], window_name="Intersecting Triangles")
+
+
+def sort_vertices_around_center(center, vertices):
+    """
+    Sort vertices around a center point in a consistent order (clockwise or counterclockwise).
+    """
+    # Calculate the centroid of the vertices to define a reference plane
+    centroid = np.mean(vertices, axis=0)
+    vectors = vertices - center
+
+    # Project vectors onto a plane orthogonal to the average normal
+    normal = np.cross(vectors[0], vectors[1])  # Approximate normal using cross product
+    normal = normal / np.linalg.norm(normal)
+    projection_matrix = np.eye(3) - np.outer(normal, normal)
+    projected_vectors = (projection_matrix @ vectors.T).T
+
+    # Calculate angles around the center in 2D projection
+    angles = np.arctan2(projected_vectors[:, 1], projected_vectors[:, 0])
+    sorted_indices = np.argsort(angles)
+    return vertices[sorted_indices]
+
+def are_points_collinear(points, tolerance=1e-6):
+    """
+    Check if a set of 3D points are collinear.
+    """
+    if len(points) < 3:
+        return True  # Fewer than 3 points are trivially collinear
+    
+    # Compute vectors between points
+    base_vector = points[1] - points[0]
+    for i in range(2, len(points)):
+        check_vector = points[i] - points[0]
+        cross_product = np.cross(base_vector, check_vector)
+        if np.linalg.norm(cross_product) > tolerance:
+            return False  # Points are not collinear
+    return True  # All points are collinear
+
+
+def calculate_solid_angle(mesh):
+    vertices = np.asarray(mesh.vertices)
+    triangles = np.asarray(mesh.triangles)
+    solid_angle_results = []
+    vertex_surfaces = []
+
+    for i, vertex in enumerate(vertices):
+        # Find connected triangles
+        connected_triangles = [tri for tri in triangles if i in tri]
+
+        # Find first-order neighbors
+        neighbors = set()
+        for tri in connected_triangles:
+            for v in tri:
+                if v != i:  # Skip the current vertex
+                    neighbors.add(v)
+        neighbor_vertices = vertices[list(neighbors)]
+
+        # Skip vertices with fewer than 2 neighbors
+        if len(neighbor_vertices) < 3:
+            solid_angle_results.append(0)  # Assign a solid angle of 0
+            vertex_surfaces.append((vertex, None, None, None, None))  # No surface info
+            continue
+
+        # Check for collinearity
+        if are_points_collinear(neighbor_vertices):
+            solid_angle_results.append(0)  # Assign a solid angle of 0
+            vertex_surfaces.append((vertex, None, None, None, None))  # No surface info
+            continue
+
+        # Fit a plane to the neighbors
+        plane_normal, plane_point = fit_plane(neighbor_vertices)
+
+        # Sort neighbors to form a valid polygon
+        sorted_neighbors = sort_vertices_around_center(vertex, neighbor_vertices)
+
+        # Calculate the polygon area on the plane
+        area = calculate_polygon_area_3d(sorted_neighbors, plane_normal)
+
+        # Calculate the distance from the original vertex to the plane
+        vector_to_plane = vertex - plane_point
+        min_distance = np.abs(np.dot(vector_to_plane, plane_normal))
+
+        # Compute A / r^2
+        if min_distance > 0:
+            solid_angle_measure = area / (min_distance ** 2)
+        else:
+            solid_angle_measure = 0  # Avoid division by zero
+
+        solid_angle_results.append(solid_angle_measure)
+        vertex_surfaces.append((vertex, neighbor_vertices, sorted_neighbors, plane_normal, plane_point))
+    
+    return solid_angle_results, vertex_surfaces
+
+
+def fit_plane(points):
+    """
+    Fit a plane to a set of 3D points using Singular Value Decomposition (SVD).
+    Returns the plane normal and a point on the plane.
+    """
+    centroid = np.mean(points, axis=0)
+    centered_points = points - centroid
+    _, _, vh = np.linalg.svd(centered_points)
+    normal = vh[-1]  # The last singular vector corresponds to the normal
+    return normal, centroid
+
+def project_points_onto_plane(points, plane_normal, plane_point):
+    """
+    Project 3D points onto a plane defined by a normal and a point on the plane.
+    """
+    plane_normal = plane_normal / np.linalg.norm(plane_normal)
+    projections = []
+    for p in points:
+        vector_to_plane = p - plane_point
+        distance_to_plane = np.dot(vector_to_plane, plane_normal)
+        projection = p - distance_to_plane * plane_normal
+        projections.append(projection)
+    return np.array(projections)
+
+def calculate_polygon_area_3d(points, plane_normal):
+    """
+    Calculate the area of a polygon defined by a set of 3D points.
+    Assumes the points are coplanar and ordered (e.g., via `sort_vertices_around_center`).
+    """
+    # Project points to 2D for polygon area calculation
+    plane_normal = plane_normal / np.linalg.norm(plane_normal)
+    projection_matrix = np.eye(3) - np.outer(plane_normal, plane_normal)  # Orthogonal projection
+    points_2d = (projection_matrix @ points.T).T[:, :2]  # Drop to 2D by ignoring one dimension
+
+    # Use the shoelace formula to calculate the polygon area
+    area = 0.0
+    for i in range(len(points_2d)):
+        x1, y1 = points_2d[i]
+        x2, y2 = points_2d[(i + 1) % len(points_2d)]
+        area += x1 * y2 - y1 * x2
+    return abs(area) / 2.0
+
+def visualize_vertex_surface(mesh, vertex_surface):
+    """
+    Visualize the given vertex, its neighbors, the projected polygon, and the plane.
+    """
+    vertex, neighbor_vertices, projected_neighbors, plane_normal, plane_point = vertex_surface
+
+    # Skip visualization if there are no valid neighbors
+    if neighbor_vertices is None or projected_neighbors is None:
+        print("No valid neighbors for this vertex. Skipping visualization.")
+        return
+
+    # Create Open3D geometries
+    mesh.paint_uniform_color([0.7, 0.7, 0.7])  # Light gray for the mesh
+
+    # Highlight the vertex
+    vertex_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=1)
+    vertex_sphere.translate(vertex)
+    vertex_sphere.paint_uniform_color([1, 0, 0])  # Red for the selected vertex
+
+    # Highlight neighbor vertices
+    neighbor_spheres = []
+    for neighbor in neighbor_vertices:
+        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.5)
+        sphere.translate(neighbor)
+        sphere.paint_uniform_color([0, 1, 0])  # Green for neighbors
+        neighbor_spheres.append(sphere)
+
+    # Create a line set for the polygon
+    polygon_lines = []
+    for i in range(len(projected_neighbors)):
+        start = projected_neighbors[i]
+        end = projected_neighbors[(i + 1) % len(projected_neighbors)]
+        line = o3d.geometry.LineSet()
+        line.points = o3d.utility.Vector3dVector([start, end])
+        line.lines = o3d.utility.Vector2iVector([[0, 1]])
+        line.paint_uniform_color([0, 0, 1])  # Blue for the polygon
+        polygon_lines.append(line)
+
+    # Visualize all geometries
+    o3d.visualization.draw_geometries(
+        [mesh, vertex_sphere, *neighbor_spheres, *polygon_lines],
+        window_name="Vertex Surface Visualization",
+    )
+
+
+def smooth_solid_angles(mesh, solid_angles, vertex_surfaces, threshold=0.01):
+    
+#TODO rerun until all above threshold
+
+    vertices = np.asarray(mesh.vertices)
+    for i in range(len(solid_angles)):
+        if solid_angles[i] > 0 and solid_angles[i] <= threshold:
+            vertex, neighbor_vertices, projected_neighbors, plane_normal, plane_point = vertex_surfaces[i]
+
+            distance = np.dot(vertex - plane_point, plane_normal)
+            projected_vertex = vertex - distance * plane_normal
+
+            vertices[i] = projected_vertex
+
+    mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    mesh.compute_vertex_normals()
+
+    return mesh
+
+
+
 # Load the original point cloud
-pcd_file = "video_processing/point_clouds/@062 255 2024-12-05 13-12-57.pcd"
+pcd_file = "video_processing/point_clouds/@039 255 2024-11-14 04-36-34.pcd"
 pcd = o3d.io.read_point_cloud(pcd_file)
 points = np.asarray(pcd.points)
 print(len(points))
-o3d.visualization.draw_geometries([pcd], window_name="Original PCD")
+#o3d.visualization.draw_geometries([pcd], window_name="Original PCD")
 
 # Cluster points in the XZ plane
 radius = 1 # Clustering radius in XZ plane
 clustered_points = cluster_points_in_xz(points, radius)
 
-# clustered_points = remove_isolated_points(clustered_points, 9)
+#clustered_points = remove_isolated_points(clustered_points, 6)
 
 clustered_pcd = o3d.geometry.PointCloud()
 clustered_pcd.points = o3d.utility.Vector3dVector(clustered_points)
 
-o3d.visualization.draw_geometries([clustered_pcd], window_name="Clustered Points")
+#o3d.visualization.draw_geometries([clustered_pcd], window_name="Clustered Points")
 
 # Perform Delaunay triangulation with edge length filtering
 max_edge_length = 60.0  # Maximum allowed edge length for triangles
 valid_triangles, leftover_points = delaunay_triangulation_with_edge_filter(clustered_points, max_edge_length)
+
+# initial_mesh = o3d.geometry.TriangleMesh()
+# initial_mesh.vertices = o3d.utility.Vector3dVector(clustered_points)
+# initial_mesh.triangles = o3d.utility.Vector3iVector(valid_triangles)
+# o3d.visualization.draw_geometries([initial_mesh], window_name="pre y removal")
+# initial_mesh = remove_negative_y_normals(initial_mesh)
+# o3d.visualization.draw_geometries([initial_mesh], window_name="Removed negative y")
+# valid_triangles = initial_mesh.triangles
 
 # Fill gaps by iteratively triangulating the closest points with KDTree optimization
 print("Filling gaps in the triangulation...")
@@ -484,6 +878,10 @@ print(len(filled_triangles))
 mesh = o3d.geometry.TriangleMesh()
 mesh.vertices = o3d.utility.Vector3dVector(clustered_points)
 mesh.triangles = o3d.utility.Vector3iVector(filled_triangles)
+
+
+colored_mesh = visualize_mesh_with_fixed_colors(mesh)
+#o3d.visualization.draw_geometries([colored_mesh, clustered_pcd], window_name="Colored Mesh")
 
 boundary_edges = find_boundary_edges(mesh)
 
@@ -497,7 +895,7 @@ else:
 boundary_visualization = visualize_boundary_edges(mesh, boundary_edges)
 
 # Visualize the mesh and the boundary edges
-o3d.visualization.draw_geometries([mesh, boundary_visualization], window_name="Boundary Edges")
+#o3d.visualization.draw_geometries([mesh, boundary_visualization], window_name="Boundary Edges")
 
 distance_threshold = 5.0  # Threshold for closing gaps in loops
 loops = group_edges_into_loops(boundary_edges, np.asarray(mesh.vertices), distance_threshold)
@@ -508,7 +906,7 @@ loop_visualizations = visualize_loops(mesh, loops)
 print(len(loop_visualizations))
 
 # Visualize the mesh and the loops
-o3d.visualization.draw_geometries([mesh] + loop_visualizations, window_name="Detected Loops")
+#o3d.visualization.draw_geometries([mesh] + loop_visualizations, window_name="Detected Loops")
 
 
 mesh = fill_holes(mesh, max_edge_length, distance_threshold=5.0)
@@ -522,6 +920,8 @@ print("Filtering top n components...")
 
 mesh = filter_overconnected_triangles(mesh)
 
+colored_mesh = visualize_mesh_with_fixed_colors(mesh)
+#o3d.visualization.draw_geometries([colored_mesh, clustered_pcd], window_name="Colored Mesh")
 
 # DOUBLE SIDED 
 
@@ -534,10 +934,41 @@ mesh.triangles = o3d.utility.Vector3iVector(double_sided_triangles)
 
 # Compute normals for the mesh
 mesh.compute_triangle_normals()
+mesh.compute_vertex_normals()
+
+
+
+# Calculate solid angle measures and store vertex surface data
+solid_angles, vertex_surfaces = calculate_solid_angle(mesh)
+print(min([solid_angle for solid_angle in solid_angles if solid_angle != 0]))
+# Pick a vertex to visualize
+
+# for vertex_index_to_visualize in np.argsort(solid_angles):
+#     if solid_angles[vertex_index_to_visualize] < 100 and solid_angles[vertex_index_to_visualize] != 0:
+#         print(f"Visualizing solid angle of value {solid_angles[vertex_index_to_visualize]}")
+#         visualize_vertex_surface(mesh, vertex_surfaces[vertex_index_to_visualize])
+
+o3d.visualization.draw_geometries([mesh, clustered_pcd], window_name="Before Mesh with Gaps")
+
+mesh = smooth_solid_angles(mesh, solid_angles, vertex_surfaces, threshold=10)
+
+
 
 # Visualize the updated mesh and points
 print("Visualizing the updated mesh and points...")
 
 o3d.visualization.draw_geometries([mesh, clustered_pcd], window_name="Updated Mesh with Filled Gaps")
 
+# colored_mesh = visualize_mesh_with_fixed_colors(mesh)
+# o3d.visualization.draw_geometries([colored_mesh, clustered_pcd], window_name="Colored Mesh")
 
+# topographical_mesh = visualize_topographical_map_multi_color(mesh)
+# axes = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1000.0, origin=[0, 0, 0])
+# o3d.visualization.draw_geometries([topographical_mesh, axes], window_name="Topographical Mesh")
+
+# print("Number of triangles:", len(mesh.triangles))
+# simplified_mesh = mesh.simplify_quadric_decimation(target_number_of_triangles=len(mesh.triangles) // 2)
+# colored_mesh = visualize_mesh_with_fixed_colors(simplified_mesh)
+# o3d.visualization.draw_geometries([colored_mesh, clustered_pcd], window_name="Colored Simplified Mesh")
+
+highlight_and_visualize_intersecting_triangles(mesh)
