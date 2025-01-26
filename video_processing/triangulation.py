@@ -7,6 +7,9 @@ import random
 from collections import defaultdict
 from scipy.spatial import ConvexHull, QhullError
 from tqdm import tqdm
+from geomdl import BSpline
+from geomdl import fitting
+from geomdl.visualization import VisMPL
 
 
 def cluster_points_in_xz(points, radius):
@@ -988,3 +991,35 @@ o3d.visualization.draw_geometries([mesh, clustered_pcd], window_name="Updated Me
 # o3d.visualization.draw_geometries([colored_mesh, clustered_pcd], window_name="Colored Simplified Mesh")
 
 highlight_and_visualize_intersecting_triangles(mesh)
+
+# # Step 2: Extract the vertices from the Open3D mesh
+# vertices = np.asarray(mesh.vertices)  # Get the mesh vertices as numpy array
+# # Step 1: Create and set control points for the NURBS surface
+# ctrlpts = vertices.reshape(-1, 3)  # Flatten control points
+# size_u = 10  # Set the grid size in the u-direction
+# size_v = 10  # Set the grid size in the v-direction
+
+# surf = BSpline.Surface()
+# surf.degree_u = 2  # Set the degree of the surface in the u-direction
+# surf.degree_v = 2  # Set the degree of the surface in the v-direction
+# surf.set_ctrlpts(ctrlpts.tolist(), size_u, size_v)
+
+# # Step 2: Sample the surface at a grid of (u, v) values
+# u_vals = np.linspace(0, 1, size_u)
+# v_vals = np.linspace(0, 1, size_v)
+# surface_points = []
+
+# for u in u_vals:
+#     for v in v_vals:
+#         point = surf.evaluate_single(u, v)  # Get the point at (u, v)
+#         surface_points.append(point)
+
+# # Convert the list of points to a NumPy array
+# surface_points = np.array(surface_points)
+
+# # Step 3: Create an Open3D PointCloud from the surface points
+# point_cloud = o3d.geometry.PointCloud()
+# point_cloud.points = o3d.utility.Vector3dVector(surface_points)
+
+# # Step 4: Visualize the surface in Open3D
+# o3d.visualization.draw_geometries([point_cloud])
