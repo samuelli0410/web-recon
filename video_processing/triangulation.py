@@ -201,7 +201,7 @@ def group_edges_into_loops(boundary_edges, vertices, distance_threshold=5.0):
     return loops
 
 
-def fill_holes(mesh, max_edge_length, distance_threshold=5.0):
+def fill_holes(mesh, max_edge_length, distance_threshold=20.0):
     """
     Fill holes in a TriangleMesh.
 
@@ -817,29 +817,33 @@ def visualize_vertex_surface(mesh, vertex_surface):
     )
 
 
-def smooth_solid_angles(mesh, solid_angles, vertex_surfaces, threshold=0.01):
-    
-#TODO rerun until all above threshold
+def smooth_solid_angles(mesh, threshold=0.01, max_iterations=5):
+    smallest_angle = 0
+    solid_angles, vertex_surfaces = calculate_solid_angle(mesh)
+    counter = 1
+    while smallest_angle <= threshold and counter <= max_iterations:
+        print(f"Iteration {counter} smoothing...")
+        vertices = np.asarray(mesh.vertices)
+        for i in tqdm(range(len(solid_angles))):
+            if solid_angles[i] > 0 and solid_angles[i] <= threshold:
+                vertex, neighbor_vertices, projected_neighbors, plane_normal, plane_point = vertex_surfaces[i]
 
-    vertices = np.asarray(mesh.vertices)
-    for i in range(len(solid_angles)):
-        if solid_angles[i] > 0 and solid_angles[i] <= threshold:
-            vertex, neighbor_vertices, projected_neighbors, plane_normal, plane_point = vertex_surfaces[i]
+                distance = np.dot(vertex - plane_point, plane_normal)
+                projected_vertex = vertex - distance * plane_normal
 
-            distance = np.dot(vertex - plane_point, plane_normal)
-            projected_vertex = vertex - distance * plane_normal
+                vertices[i] = projected_vertex
 
-            vertices[i] = projected_vertex
-
-    mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    mesh.compute_vertex_normals()
-
+        mesh.vertices = o3d.utility.Vector3dVector(vertices)
+        mesh.compute_vertex_normals()
+        solid_angles, vertex_surfaces = calculate_solid_angle(mesh)
+        smallest_angle = min([s for s in solid_angles if s != 0])
+        counter += 1
     return mesh
 
 
 
 # Load the original point cloud
-pcd_file = "video_processing/point_clouds/@039 255 2024-11-14 04-36-34.pcd"
+pcd_file = "video_processing/point_clouds/@026 255 2024-11-02 16-15-44.pcd"
 pcd = o3d.io.read_point_cloud(pcd_file)
 points = np.asarray(pcd.points)
 print(len(points))
@@ -857,7 +861,7 @@ clustered_pcd.points = o3d.utility.Vector3dVector(clustered_points)
 #o3d.visualization.draw_geometries([clustered_pcd], window_name="Clustered Points")
 
 # Perform Delaunay triangulation with edge length filtering
-max_edge_length = 60.0  # Maximum allowed edge length for triangles
+max_edge_length = 100.0  # Maximum allowed edge length for triangles
 valid_triangles, leftover_points = delaunay_triangulation_with_edge_filter(clustered_points, max_edge_length)
 
 # initial_mesh = o3d.geometry.TriangleMesh()
@@ -938,9 +942,9 @@ mesh.compute_vertex_normals()
 
 
 
-# Calculate solid angle measures and store vertex surface data
-solid_angles, vertex_surfaces = calculate_solid_angle(mesh)
-print(min([solid_angle for solid_angle in solid_angles if solid_angle != 0]))
+# # Calculate solid angle measures and store vertex surface data
+# solid_angles, vertex_surfaces = calculate_solid_angle(mesh)
+# print(min([solid_angle for solid_angle in solid_angles if solid_angle != 0]))
 # Pick a vertex to visualize
 
 # for vertex_index_to_visualize in np.argsort(solid_angles):
@@ -950,7 +954,7 @@ print(min([solid_angle for solid_angle in solid_angles if solid_angle != 0]))
 
 o3d.visualization.draw_geometries([mesh, clustered_pcd], window_name="Before Mesh with Gaps")
 
-mesh = smooth_solid_angles(mesh, solid_angles, vertex_surfaces, threshold=10)
+mesh = smooth_solid_angles(mesh, threshold=10)
 
 
 
