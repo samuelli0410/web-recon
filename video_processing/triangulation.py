@@ -675,13 +675,20 @@ def are_points_collinear(points, tolerance=1e-6):
     return True  # All points are collinear
 
 
-def calculate_solid_angle(mesh):
+def calculate_solid_angle(mesh, cached_points=None, cached_angles=None, cached_surfaces=None):
+    print("Calculating solid angles...")
     vertices = np.asarray(mesh.vertices)
     triangles = np.asarray(mesh.triangles)
-    solid_angle_results = []
-    vertex_surfaces = []
+    solid_angle_results = [None for _ in range(len(vertices))] if cached_angles is None else cached_angles
+    vertex_surfaces = [None for _ in range(len(vertices))] if cached_surfaces is None else cached_surfaces
+    if cached_points is None:
+        cached_points = set(range(len(vertices)))
+    else:
+        print(f"Found {len(cached_points)} cached points to check.")
 
-    for i, vertex in enumerate(vertices):
+    for i, vertex in tqdm(enumerate(vertices)):
+        if i not in cached_points:
+            continue
         # Find connected triangles
         connected_triangles = [tri for tri in triangles if i in tri]
 
@@ -695,14 +702,14 @@ def calculate_solid_angle(mesh):
 
         # Skip vertices with fewer than 2 neighbors
         if len(neighbor_vertices) < 3:
-            solid_angle_results.append(0)  # Assign a solid angle of 0
-            vertex_surfaces.append((vertex, None, None, None, None))  # No surface info
+            solid_angle_results[i] = 0  # Assign a solid angle of 0
+            vertex_surfaces[i] = (vertex, None, None, None, None, None)  # No surface info
             continue
 
         # Check for collinearity
         if are_points_collinear(neighbor_vertices):
-            solid_angle_results.append(0)  # Assign a solid angle of 0
-            vertex_surfaces.append((vertex, None, None, None, None))  # No surface info
+            solid_angle_results[i] = 0  # Assign a solid angle of 0
+            vertex_surfaces[i] = (vertex, None, None, None, None, None) # No surface info
             continue
 
         # Fit a plane to the neighbors
@@ -724,8 +731,8 @@ def calculate_solid_angle(mesh):
         else:
             solid_angle_measure = 0  # Avoid division by zero
 
-        solid_angle_results.append(solid_angle_measure)
-        vertex_surfaces.append((vertex, neighbor_vertices, sorted_neighbors, plane_normal, plane_point))
+        solid_angle_results[i] = solid_angle_measure
+        vertex_surfaces[i] = (vertex, neighbor_vertices, neighbors, sorted_neighbors, plane_normal, plane_point)
     
     return solid_angle_results, vertex_surfaces
 
@@ -817,27 +824,32 @@ def visualize_vertex_surface(mesh, vertex_surface):
     )
 
 
-def smooth_solid_angles(mesh, threshold=0.01, max_iterations=5):
-    smallest_angle = 0
+def smooth_solid_angles(mesh, threshold=0.1, max_iterations=10):
     solid_angles, vertex_surfaces = calculate_solid_angle(mesh)
-    counter = 1
-    while smallest_angle <= threshold and counter <= max_iterations:
-        print(f"Iteration {counter} smoothing...")
+    smallest_angle = min([s for s in solid_angles if s != 0])
+    for counter in range(max_iterations):
+        cached_changes = set()
+        if smallest_angle > threshold:
+            break
+        print(f"Iteration {counter + 1} smoothing...")
         vertices = np.asarray(mesh.vertices)
         for i in tqdm(range(len(solid_angles))):
             if solid_angles[i] > 0 and solid_angles[i] <= threshold:
-                vertex, neighbor_vertices, projected_neighbors, plane_normal, plane_point = vertex_surfaces[i]
-
+                vertex, neighbor_vertices, neighbor_indices, projected_neighbors, plane_normal, plane_point = vertex_surfaces[i]
                 distance = np.dot(vertex - plane_point, plane_normal)
                 projected_vertex = vertex - distance * plane_normal
 
                 vertices[i] = projected_vertex
+                
+                cached_changes.add(i)
+                cached_changes.union(neighbor_indices)
 
         mesh.vertices = o3d.utility.Vector3dVector(vertices)
         mesh.compute_vertex_normals()
-        solid_angles, vertex_surfaces = calculate_solid_angle(mesh)
+        solid_angles, vertex_surfaces = calculate_solid_angle(mesh, cached_points=cached_changes,
+                                                              cached_angles=solid_angles, cached_surfaces=vertex_surfaces)
         smallest_angle = min([s for s in solid_angles if s != 0])
-        counter += 1
+    
     return mesh
 
 
