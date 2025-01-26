@@ -19,7 +19,7 @@ start = time.time()
 print("Starting up")
 
 #change these
-cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/PCD Files/Good PCD's/@031r 255 2024-11-07 23-21-49 (with Spider).pcd")
+cloud = o3d.io.read_point_cloud("video_processing/point_clouds/@013 255 2024-10-05 03-18-53.pcd")
 
 
 
@@ -36,7 +36,7 @@ neighborhood = 80
 pcd_arr = np.asarray(cloud.points)
 
 
-n = 1600.0
+n = 400.0
 num_clusters = 100
 
 #figuring out the smallest degree clustering in which we just isolate the spider
@@ -327,7 +327,7 @@ try:
     pcd.points = o3d.utility.Vector3dVector(spider_segment_combined)
 
 
-    o3d.io.write_point_cloud("C:/Users/samue/Downloads/Research/SpiderRemoved.pcd", pcd)
+    o3d.io.write_point_cloud("video_processing/point_clouds/@013 255 2024-10-05 03-18-53(spiderRemoved).pcd", pcd)
     print("done")
 except Exception as e:
     print(e)
