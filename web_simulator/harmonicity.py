@@ -112,7 +112,7 @@ def plot_error_vs_p(density, q=1, delta=0.01, max_p=3.0):
 
 if __name__ == "__main__":
     # Example usage
-    file_path = 'video_processing/point_clouds/!010 255 2024-10-31 18-38-44.pcd'
+    file_path = 'video_processing/point_clouds/@020 255 2024-10-19 15-36-41.pcd'
     points = load_pcd(file_path)
     
     # Calculate density
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     
     # Compute harmonicity for a given p and q
     p = 1.0
-    q = 2.0
+    q = 1.0
     harmonicity = p_harmonicity(density, p, q)
     
     
