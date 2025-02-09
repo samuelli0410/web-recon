@@ -686,7 +686,7 @@ def calculate_solid_angle(mesh, cached_points=None, cached_angles=None, cached_s
     else:
         print(f"Found {len(cached_points)} cached points to check.")
 
-    for i, vertex in tqdm(enumerate(vertices)):
+    for i, vertex in enumerate(tqdm(vertices)):
         if i not in cached_points:
             continue
         # Find connected triangles
@@ -833,7 +833,7 @@ def smooth_solid_angles(mesh, threshold=0.1, max_iterations=10):
             break
         print(f"Iteration {counter + 1} smoothing...")
         vertices = np.asarray(mesh.vertices)
-        for i in tqdm(range(len(solid_angles))):
+        for i in range(len(solid_angles)):
             if solid_angles[i] > 0 and solid_angles[i] <= threshold:
                 vertex, neighbor_vertices, neighbor_indices, projected_neighbors, plane_normal, plane_point = vertex_surfaces[i]
                 distance = np.dot(vertex - plane_point, plane_normal)
@@ -854,15 +854,22 @@ def smooth_solid_angles(mesh, threshold=0.1, max_iterations=10):
 
 
 
+hyperparameters = {
+    "cluster_radius": 1.0,
+    "max_edge_length": 50.0,
+    "loop_threshold": 5.0,
+    "min_solid_angle": 10.0
+}
+
 # Load the original point cloud
-pcd_file = "video_processing/point_clouds/@026 255 2024-11-02 16-15-44.pcd"
+pcd_file = "video_processing/point_clouds/@062 255 2024-12-05 13-12-57.pcd"
 pcd = o3d.io.read_point_cloud(pcd_file)
 points = np.asarray(pcd.points)
 print(len(points))
 #o3d.visualization.draw_geometries([pcd], window_name="Original PCD")
 
 # Cluster points in the XZ plane
-radius = 1 # Clustering radius in XZ plane
+radius = hyperparameters["cluster_radius"] # Clustering radius in XZ plane
 clustered_points = cluster_points_in_xz(points, radius)
 
 #clustered_points = remove_isolated_points(clustered_points, 6)
@@ -873,7 +880,7 @@ clustered_pcd.points = o3d.utility.Vector3dVector(clustered_points)
 #o3d.visualization.draw_geometries([clustered_pcd], window_name="Clustered Points")
 
 # Perform Delaunay triangulation with edge length filtering
-max_edge_length = 100.0  # Maximum allowed edge length for triangles
+max_edge_length = hyperparameters["max_edge_length"]  # Maximum allowed edge length for triangles
 valid_triangles, leftover_points = delaunay_triangulation_with_edge_filter(clustered_points, max_edge_length)
 
 # initial_mesh = o3d.geometry.TriangleMesh()
@@ -913,7 +920,7 @@ boundary_visualization = visualize_boundary_edges(mesh, boundary_edges)
 # Visualize the mesh and the boundary edges
 #o3d.visualization.draw_geometries([mesh, boundary_visualization], window_name="Boundary Edges")
 
-distance_threshold = 5.0  # Threshold for closing gaps in loops
+distance_threshold = hyperparameters["loop_threshold"]  # Threshold for closing gaps in loops
 loops = group_edges_into_loops(boundary_edges, np.asarray(mesh.vertices), distance_threshold)
 
 # Visualize the loops
@@ -925,10 +932,10 @@ print(len(loop_visualizations))
 #o3d.visualization.draw_geometries([mesh] + loop_visualizations, window_name="Detected Loops")
 
 
-mesh = fill_holes(mesh, max_edge_length, distance_threshold=5.0)
+mesh = fill_holes(mesh, max_edge_length, distance_threshold=hyperparameters["loop_threshold"])
 
 
-mesh = filter_triangles_by_edge_length(mesh, 100)
+mesh = filter_triangles_by_edge_length(mesh, hyperparameters["max_edge_length"])
 
 mesh = filter_top_n_components(mesh, n=1)
 print("Filtering top n components...")
@@ -966,7 +973,7 @@ mesh.compute_vertex_normals()
 
 o3d.visualization.draw_geometries([mesh, clustered_pcd], window_name="Before Mesh with Gaps")
 
-mesh = smooth_solid_angles(mesh, threshold=10)
+mesh = smooth_solid_angles(mesh, threshold=hyperparameters["min_solid_angle"], max_iterations=100)
 
 
 

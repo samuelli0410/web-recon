@@ -18,6 +18,8 @@ import json
 import boto3
 from dataclasses import dataclass
 
+from io import StringIO
+
 # axes arrow points towards 0 time
 cut_front_frames = 0
 cut_back_frames = 0
@@ -48,6 +50,7 @@ px_per_mm = 4.86
 
 s3_client = boto3.client('s3')
 bucket_name = 'scanned-objects'
+video_bucket_name = 'spider-videos'
 crop_file = "video_processing/crop_data/@013 255 2024-10-05 03-18-53 crop.json" # IGNORE
 
 
@@ -114,9 +117,24 @@ def process_frame_grey(frame_data, prev_roll, show_brightness=False, box=BOX_FOU
     return points, imagelen, (back_boundary, -distance)
 
 def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], distance_data, show_brightness=False,
-                                     upload_s3=False, box=BOX_FOUR_INCH):
+                                     upload_s3=False, box=BOX_FOUR_INCH, s3_video=None, s3_distance_data=None):
+    
+    if s3_distance_data:
+        response = s3_client.get_object(Bucket=video_bucket_name, Key=s3_distance_data)
+        csv_string = response['Body'].read().decode('utf-8')
+        distance_data = pd.read_csv(StringIO(csv_string))
+        print(f"Read from {s3_distance_data}...")
+
     m = camera_speed_factor(distance_data)
-    cap = cv2.VideoCapture(video_path)
+
+    if s3_video and s3_distance_data:
+        response = s3_client.get_object(Bucket=video_bucket_name, Key=s3_video)
+        video_bytes = response['Body'].read()
+        video_array = np.frombuffer(video_bytes, np.uint8)
+        cap = cv2.VideoCapture(video_array)
+        print(f"Read from {s3_video}...")
+    else:
+        cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error: Could not open video.")
         return
@@ -215,7 +233,7 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], di
     if all_points:
         if len(back_boundaries) == 0:
             back_boundaries.append(min([point[2] for point in all_points]))
-        z_boundary_min = min(back_boundaries) + 150
+        z_boundary_min = min(back_boundaries) + 130
         z_boundary_max = z_boundary_min + box.box_depth
         all_points = [point for point in all_points if z_boundary_min <= point[2] < z_boundary_max]
 
@@ -288,13 +306,15 @@ def normalize_pcd(pcd):
 
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv("video_processing/distance_records/@051 255 distance data 2024-11-29 15-42-41.csv")
-    video_path = "video_processing/spider_videos/@051 255 2024-11-29 15-42-41.mp4"
+    distance_data = pd.read_csv("video_processing/distance_records/@053 255 distance data 2024-12-01 15-02-37.csv")
+    video_path = os.path.expanduser("~/Downloads/@053 255 2024-12-01 15-02-37.mp4")
     create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
                                     show_brightness=False,
-                                    upload_s3=False,
-                                    box=BOX_FOUR_INCH)
+                                    upload_s3=True,
+                                    box=BOX_FOUR_INCH,
+                                    s3_video="@064/@064 255 2024-12-10 17-49-41.mp4",
+                                    s3_distance_data="@064/@064 255 distance data 2024-12-10 17-49-41.csv")
     
 
 
