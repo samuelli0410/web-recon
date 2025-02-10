@@ -42,8 +42,17 @@ class BOX_THREE_INCH:
 
     box_depth = 630
 
+@dataclass(frozen=True)
+class BOX_SIX_INCH:
+    left_border = 470
+    right_border = 1500
+    top_border = 70
+    bottom_border = 1000
 
-pixel_threshold = 0.55
+    box_depth = 1030
+
+
+pixel_threshold = 0.35
 
 px_per_mm = 4.86
 
@@ -110,6 +119,8 @@ def process_frame_grey(frame_data, prev_roll, show_brightness=False, box=BOX_FOU
     binary_image = binary_image[20:, :]
     back_boundary = False
     binary_image = binary_image[box.top_border:box.bottom_border, box.left_border:box.right_border]
+    # skio.imshow(binary_image)
+    # skio.show()
     if binary_image.sum() / binary_image.size > 0.98:
         back_boundary = True
     ys, xs = np.where(binary_image == 255)
@@ -245,11 +256,11 @@ def create_and_visualize_point_cloud(video_path: str, dst_dir: Optional[str], di
             pcd = normalize_pcd(pcd)
             video_name = Path(video_path).stem
             if dst_dir is None: 
-                file_name = str(Path(video_path).parent / f"{video_name}.pcd")
+                file_name = str(Path(video_path).parent / f"{video_name} {pixel_threshold}.pcd")
             else:
                 dst_dir = Path(dst_dir)
                 dst_dir.mkdir(exist_ok=True)
-                file_name = str(dst_dir / f"{video_name}.pcd")
+                file_name = str(dst_dir / f"{video_name} {pixel_threshold}.pcd")
             o3d.io.write_point_cloud(file_name, pcd)
             print(f"Saved point cloud to {dst_dir}.")
             if upload_s3:
@@ -306,15 +317,15 @@ def normalize_pcd(pcd):
 
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv("video_processing/distance_records/@053 255 distance data 2024-12-01 15-02-37.csv")
-    video_path = os.path.expanduser("~/Downloads/@053 255 2024-12-01 15-02-37.mp4")
+    distance_data = pd.read_csv("video_processing/distance_records/tangle001 255 distance data 2025-02-08 18-50-40.csv")
+    video_path = os.path.expanduser("video_processing/spider_videos/tangle001 255 2025-02-08 18-50-40.mp4")
     create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
                                     show_brightness=False,
                                     upload_s3=True,
-                                    box=BOX_FOUR_INCH,
-                                    s3_video="@064/@064 255 2024-12-10 17-49-41.mp4",
-                                    s3_distance_data="@064/@064 255 distance data 2024-12-10 17-49-41.csv")
+                                    box=BOX_SIX_INCH,
+                                    s3_video=None,
+                                    s3_distance_data=None)
     
 
 
