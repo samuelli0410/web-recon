@@ -2,26 +2,21 @@ import numpy as np
 import open3d as o3d
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
-from scipy.spatial import KDTree, Delaunay
-
-import numpy as np
+from scipy.spatial import KDTree
 import heapq
-import open3d as o3d
 import time
-
-from collections import defaultdict
 from scipy.spatial import KDTree
 from sklearn.cluster import DBSCAN
-from sklearn.decomposition import PCA
 
 
 start = time.time()
 def dijkstra(points, root_index, k=10):
     """Runs Dijkstra's algorithm using a k-nearest neighbors graph for efficiency."""
     num_points = len(points)
+    # print(num_points)
     tree = KDTree(points)
     
-    # Get k-nearest neighbors (excluding the point itself)
+    # Get k-nearest neighbors 
     distances, neighbors = tree.query(points, k=k+1)
     
     # Initialize distances and priority queue
@@ -31,6 +26,7 @@ def dijkstra(points, root_index, k=10):
     edges = []
     
     while pq:
+        # print(time.time()-start)
         current_dist, current_node = heapq.heappop(pq)
         
         # Skip if we already found a shorter path
@@ -185,8 +181,18 @@ def graphCleanup(graph_edges, newMap):
     graph_edges_new_new = [x for x in graph_edges_new if x[0] != x[1]]
     return graph_edges_new_new
 
+def save_to_pcd(points, filename="output.pcd"):
+
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(points)
+
+
+    o3d.io.write_point_cloud(filename, point_cloud)
+    print(f"Saved {len(points)} points to {filename}")
+
+
 if __name__ == "__main__":
-    cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
+    cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/B.pcd")
     points = np.asarray(cloud.points)
 
     print(points.__len__())
@@ -195,11 +201,11 @@ if __name__ == "__main__":
 
     contracted_points = laplacian_contraction(points, k=20)
     root_idx = find_min_coord_point(points)
-    distances_from_root, graph_edges = dijkstra(points, root_idx, k=10)
-
+    distances_from_root, graph_edges = dijkstra(points, root_idx, k=40)
+    # save_to_pcd(contracted_points, "C:/Users/samue/Downloads/Research/Spider/WebReconstruction/Output1.pcd")
     # visualize_graph_points_overlay(contracted_points, graph_edges,cloud)
     
-    valid = volexReduction(contracted_points, 0.9)
+    valid = volexReduction(contracted_points, 0.8)
 
 
     newPoints, newMap, Trs = datacleanup(valid)
