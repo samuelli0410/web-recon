@@ -236,14 +236,6 @@ def prim(points, rootidx, k=10):
 
 
 def contractionConnection(points):
-    # contracted_points = laplacian_contraction(points, k=20)
-    # root_idx = find_min_coord_point(points)
-    # distances_from_root, graph_edges = dijkstra(points, root_idx, k=50)
-    # valid = volexReduction(contracted_points, 0.9)
-    # newPoints, newMap, Trs = datacleanup(valid)
-    # graph_edges = graphCleanup(graph_edges, newMap)
-
-    # return newPoints, graph_edges
     contracted_points = laplacian_contraction(points, k=20, sL=2)
     root_idx = find_min_coord_point(contracted_points)
     graph_edges = prim(contracted_points, root_idx)
@@ -330,20 +322,9 @@ def makeGraphs(a,b,c,d):
             print("SUMVERT", len(SUMvertices))
             print("SUMEDGE", len(SUMedges))
             
-            # colors = [[1, 0, 0] for _ in lines]  # Red edges
-            # line_set = o3d.geometry.LineSet()
-            # line_set.points = o3d.utility.Vector3dVector(points)
-            # line_set.lines = o3d.utility.Vector2iVector(lines)
-            # line_set.colors = o3d.utility.Vector3dVector(colors)
-
-            # vis.add_geometry(point_cloud)
-            # vis.add_geometry(line_set)
-            # vis.add_geometry(cloud)
 
 cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/@058 255 2024-12-05 04-26-14.pcd")
 
-    #"C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/@058 255 2024-12-05 04-26-14.pcd")
-    #"C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
 
 print(len(cloud.points))
 a,b,c,d = splitIntoQuadrants(cloud.points, 15)
@@ -358,11 +339,3 @@ print(find_min_coord_point(cloud.points))
 
 
 visualize_graph_points_overlay(SUMvertices, SUMedges, cloud)
-
-
-# vis.poll_events()
-# vis.update_renderer()
-# render_option = vis.get_render_option()
-# render_option.point_size = 0.3
-# vis.run()
-# vis.destroy_window()
