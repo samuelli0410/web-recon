@@ -9,6 +9,7 @@ from scipy.spatial import KDTree
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
 import threading
+import os
 import concurrent.futures
 start = time.time()
 
@@ -204,7 +205,9 @@ def prim(points, rootidx, k=10):
 def contractionConnection(points):
     print("contracting of size: " + str(len(points))) 
     contracted_points = laplacian_contraction(points, k=20, sL=2)
+    # print("dont laplace")
     root_idx = find_min_coord_point(contracted_points)
+    # print("start primt")
     graph_edges = prim(contracted_points, root_idx)
     print("Done Contracting of size: " + str(len(points))) 
     return contracted_points, graph_edges
@@ -257,47 +260,50 @@ def visualize_graph(points, edges):
     
     o3d.visualization.draw_geometries([point_cloud, line_set])
 
-lock = threading.Lock()
+
 SUMvertices = []
 SUMedges = []
 def makeGraphs(a,b,c,d):
+    # print("make")
     quadrants = [a, b, c, d]
     tasks = []
     
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         for i, quadrant in enumerate(quadrants):
-            if len(quadrant) > 10000:
+            if len(quadrant) > 15000:
                 print(len(quadrant))
                 print("---")
-                w, x, y, z = splitIntoQuadrants(quadrant, 5)
+                w, x, y, z = splitIntoQuadrants(quadrant, 0.1)
                 tasks.append(executor.submit(makeGraphs, w, x, y, z))
             else:
                 tasks.append(executor.submit(processQuadrant, quadrant, i))
 
 def processQuadrant(quadrant, index):
+    # print("Process")
     if quadrant.shape[0] == 0:
         print(f"Skipping quadrant {index + 1} (empty)")
         return
     
     points, edges = contractionConnection(quadrant)
+    print("Process1")
     if len(points) == 0 or len(edges) == 0:
         print(f"Skipping quadrant {index + 1} (no points/edges after processing)")
         return
     
-    with lock:
-        shifter = len(SUMvertices)
-        lines = [[e[0] + shifter, e[1] + shifter] for e in edges]
-        SUMvertices.extend(points)
-        SUMedges.extend(lines)
-        print("SUMVERT", len(SUMvertices))
-        print("SUMEDGE", len(SUMedges))
+    
+    shifter = len(SUMvertices)
+    lines = [[e[0] + shifter, e[1] + shifter] for e in edges]
+    SUMvertices.extend(points)
+    SUMedges.extend(lines)
+    print("SUMVERT", len(SUMvertices))
+    print("SUMEDGE", len(SUMedges))
 
 
 cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
 
 
 print(len(cloud.points))
-a,b,c,d = splitIntoQuadrants(cloud.points, 15)
+a,b,c,d = splitIntoQuadrants(cloud.points, 0)
 
 makeGraphs(a,b,c,d)
 
@@ -309,3 +315,23 @@ print(find_min_coord_point(cloud.points))
 
 
 visualize_graph_points_overlay(SUMvertices, SUMedges, cloud)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
