@@ -314,7 +314,7 @@ def visualize_projected_alpha_complex(points_3d, results, projection_method='pca
     
     # Plot 2: 3D View
     ax2 = fig.add_subplot(122, projection='3d')
-    ax2.scatter(points_3d[:, 0], points_3d[:, 1], points_3d[:, 2], c='b', s=10)
+    ax2.scatter(points_3d[:, 0], points_3d[:, 1], points_3d[:, 2], c='b', s=3)
     
     # Plot 3D boundaries
     for center_2d, boundary_2d in restricted_cells:
@@ -358,7 +358,7 @@ if __name__ == "__main__":
     cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
     points, _,_,_ = splitIntoQuadrants(cloud.points, 0)
     points = laplacian_contraction(points, k=20, sL=2)
-    radius = 0.5
-    results = compute_3d_alpha_complex_via_projection(points, radius=5.0, 
+    for r in range(4,10,3):
+        results = compute_3d_alpha_complex_via_projection(points, radius=r, 
                                                      projection_method='pca')
-    visualize_projected_alpha_complex(points, results)
+        visualize_projected_alpha_complex(points, results)
