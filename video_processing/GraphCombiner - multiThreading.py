@@ -299,7 +299,7 @@ def processQuadrant(quadrant, index):
     print("SUMEDGE", len(SUMedges))
 
 
-cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
+cloud = o3d.io.read_point_cloud("video_processing/point_clouds/quadrant_14.pcd")
 
 
 print(len(cloud.points))

@@ -865,11 +865,11 @@ hyperparameters = {
 }
 
 # Load the original point cloud
-pcd_file = "video_processing/point_clouds/@062 255 2024-12-05 13-12-57.pcd"
+pcd_file = "video_processing/point_clouds/@060 255 2024-12-05 12-45-49.pcd"
 pcd = o3d.io.read_point_cloud(pcd_file)
 points = np.asarray(pcd.points)
 print(len(points))
-#o3d.visualization.draw_geometries([pcd], window_name="Original PCD")
+o3d.visualization.draw_geometries([pcd], window_name="Original PCD")
 
 # Cluster points in the XZ plane
 radius = hyperparameters["cluster_radius"] # Clustering radius in XZ plane
