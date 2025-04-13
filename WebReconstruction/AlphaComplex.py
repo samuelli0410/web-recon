@@ -165,7 +165,51 @@ def is_in_circle(point, center, r):
     
     return (point[0] - center[0])**2 + (point[1] - center[1])**2 <= r**2
 
+def find_intersection(p, q, center, r):
+    # Case 1: If p and q are both in the circle, clip to [p, q]
+    if is_in_circle(p, center, r) and is_in_circle(q, center, r):
+        return [(p, q)], True, True
 
+    # Case 2: Compute intersection with the circle
+    slope = (q[1] - p[1]) / (q[0] - p[0]) if q[0] != p[0] else float('inf')  # Handle vertical lines
+    intercept = p[1] - slope * p[0] if slope != float('inf') else p[0]  # Use x-intercept for vertical lines
+
+    a = slope**2 + 1
+    b = 2 * (slope * (intercept - center[1]) - center[0])
+    c = center[0]**2 + (intercept - center[1])**2 - r**2
+    delta = b**2 - 4*a*c
+
+    # Case 2a: No intersection (discriminant <= 0)
+    if delta <= 0:
+        return [], False, False
+
+    sqrt_delta = np.sqrt(delta)
+    x1 = (-b + sqrt_delta) / (2 * a)
+    x2 = (-b - sqrt_delta) / (2 * a)
+
+    # Case 3: p is not in the circle
+    pt1 = np.array([x1, slope * x1 + intercept])
+    pt2 = np.array([x2, slope * x2 + intercept])
+
+    is_in_pq = lambda z: (z >= p[0]) and (z <= q[0])
+    check = False 
+
+    if not is_in_circle(p, center, r):
+        x = (-b - np.sqrt(delta)) / (2 * a)
+        pt1 = np.array([x, slope * x + intercept])
+        check = not is_in_pq(x)
+
+    # Case 4: q is not in the circle
+    if not is_in_circle(q, center, r):
+        x = (-b + np.sqrt(delta)) / (2 * a)
+        pt2 = np.array([x, slope * x + intercept])
+        check = (check or (not is_in_pq(x)))
+
+    # Case 5: Neither p nor q are inside the circle
+    if check:
+        return ([], False, False)
+    
+    return [(pt1, pt2)], is_in_circle(p, center, r), is_in_circle(q, center, r)
 
 
 
