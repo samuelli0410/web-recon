@@ -12,6 +12,8 @@ from collections import defaultdict
 import math
 import matplotlib.patches as mp
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 start = time.time()
@@ -279,16 +281,6 @@ def compute_3d_alpha_complex_via_projection(points_3d, radius, projection_method
     return compute_restricted_voronoi(points_2d, radius)
 
 def visualize_projected_alpha_complex(points_3d, results, projection_method='pca'):
-    """
-    Robust visualization of projected alpha complex
-    
-    Parameters:
-        points_3d: Original 3D points (n, 3)
-        results: Tuple from compute_3d_alpha_complex_via_projection
-        projection_method: Which projection was used
-    """
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
     
     restricted_cells, alpha_complex, triangles = results
     points_2d = project_3d_to_2d(points_3d, projection_method)
@@ -354,6 +346,8 @@ def visualize_projected_alpha_complex(points_3d, results, projection_method='pca
     plt.tight_layout()
     plt.show()
 
+
+
 if __name__ == "__main__":
     cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
     points, _,_,_ = splitIntoQuadrants(cloud.points, 0)
@@ -365,7 +359,7 @@ if __name__ == "__main__":
         results = compute_3d_alpha_complex_via_projection(points, radius=r, 
                                                         projection_method='pca')
         
-        visualize_projected_alpha_complex(points, results, ax=axs[i])
+        visualize_projected_alpha_complex(points, results)
         axs[i].set_title(f"Radius = {r}")
 
     plt.tight_layout()
