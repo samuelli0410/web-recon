@@ -7,8 +7,10 @@ import scipy.sparse.linalg as spla
 from scipy.spatial import KDTree
 import matplotlib.pyplot as plt
 
+from scipy.spatial.distance import euclidean
 
-def splitIntoQuadrants(points,eps):
+def splitIntoQuadrants(points, eps):
+    print("Starting quadrant splitting...")
     # Rotate points (optional, adjust as needed)
     rotationmatrix = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
     points = np.dot(points, rotationmatrix.T)
@@ -21,6 +23,7 @@ def splitIntoQuadrants(points,eps):
     quad1, quad2, quad3, quad4 = [], [], [], []
 
     # Assign points to quadrants
+    print("Assigning points to quadrants...")
     for x, y, z in points:
         if x >= -eps and y >= -eps:
             quad1.append([x, y, z])
@@ -28,30 +31,31 @@ def splitIntoQuadrants(points,eps):
             quad4.append([x, y, z])
         if x <= eps and y >= -eps:
             quad2.append([x, y, z])
-        if x <= eps  and y <= -eps:
+        if x <= eps and y <= -eps:
             quad3.append([x, y, z])
 
-    # Restore original position by adding the mean, only if quadrant is not empty
+    # Restore original position by adding the mean
+    print("Restoring original positions...")
     quad1 = np.array(quad1) + mean if quad1 else np.array([])
     quad2 = np.array(quad2) + mean if quad2 else np.array([])
     quad3 = np.array(quad3) + mean if quad3 else np.array([])
     quad4 = np.array(quad4) + mean if quad4 else np.array([])
 
     rotationmatrix_inv = np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]])
-    if quad1 is not None:
+    if len(quad1) > 0:
         quad1 = np.dot(quad1, rotationmatrix_inv.T)
-    if quad2 is not None:
+    if len(quad2) > 0:
         quad2 = np.dot(quad2, rotationmatrix_inv.T)
-    if quad3 is not None:
+    if len(quad3) > 0:
         quad3 = np.dot(quad3, rotationmatrix_inv.T)
-    if quad4 is not None:
+    if len(quad4) > 0:
         quad4 = np.dot(quad4, rotationmatrix_inv.T)
 
+    print(f"Quadrant sizes: {len(quad1)}, {len(quad2)}, {len(quad3)}, {len(quad4)}")
     return quad1, quad2, quad3, quad4
 
-
 def compute_laplacian(points, k=10):
-    """Computes the Laplacian matrix using cotangent weights for a point cloud."""
+    print("Computing Laplacian matrix...")
     n = len(points)
     tree = KDTree(points)
     neighbors = tree.query(points, k=k + 1)[1][:, 1:]
@@ -74,12 +78,15 @@ def compute_laplacian(points, k=10):
         data.append(1.0)
     
     L = sp.coo_matrix((data, (row, col)), shape=(n, n))
+    print("Laplacian matrix computed")
     return L.tocsr()
+
 def laplacian_contraction(points, iterations=5, k=10, sL=3.0):
-    """Performs Laplacian-based contraction on a point cloud."""
+    print(f"Starting Laplacian contraction with {iterations} iterations...")
     points = points.copy()
     
-    for _ in range(iterations):
+    for iter in range(iterations):
+        print(f"Iteration {iter + 1}/{iterations}")
         L = compute_laplacian(points, k)
         W_L = sp.diags([sL] * len(points))  # Contraction weight matrix
         W_H = sp.diags([1.0] * len(points))  # Attraction weight matrix
@@ -91,37 +98,60 @@ def laplacian_contraction(points, iterations=5, k=10, sL=3.0):
         # Solve for each coordinate separately using Conjugate Gradient
         points = np.column_stack([spla.cg(A, B[:, i])[0] for i in range(3)])
     
+    print("Laplacian contraction completed")
     return points
 
 
+def distance(p1, p2):
+    """Calculate Euclidean distance between two points"""
+    return np.linalg.norm(p1 - p2)
+
+def plot_3d_graph(graph, points):
+    """Visualize a 3D graph using matplotlib"""
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # Plot edges
+    for u, v in graph.edges():
+        x = [points[u][0], points[v][0]]
+        y = [points[u][1], points[v][1]]
+        z = [points[u][2], points[v][2]]
+        ax.plot(x, y, z, 'b-', linewidth=0.5, alpha=0.8)
+    
+    # Plot nodes
+    ax.scatter(points[:, 0], points[:, 1], points[:, 2], c='r', s=10)
+    
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    plt.title("3D Web Reconstruction")
+    plt.tight_layout()
+    plt.show()
+
+# Main execution
+print("Starting web reconstruction...")
+print("Loading point cloud...")
 cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
 points = np.asarray(cloud.points)
+print(f"Loaded {len(points)} points")
 
 # Compute Alpha Complex
+print("Building alpha complex...")
 alpha_complex = gudhi.AlphaComplex(points=points)
 simplex_tree = alpha_complex.create_simplex_tree()
-
-# Compute persistence and plot (optional)
-persistence = simplex_tree.persistence()
-gudhi.plot_persistence_diagram(persistence)
-plt.show()
-
-# Filter edges by persistence
-persistence_threshold = 0.1  # Adjust based on your data
 G = nx.Graph()
+for simplex, _ in simplex_tree.get_skeleton(1):
+    if len(simplex) == 2:  # It's an edge
+        G.add_edge(simplex[0], simplex[1])
 
-# Iterate over all edges in the complex
-for simplex, filtration_value in simplex_tree.get_skeleton(1):
-    if len(simplex) == 2:  # Only edges (not vertices)
-        # Check persistence: find when this edge dies
-        for interval in simplex_tree.persistence_intervals_in_dimension(1):
-            if filtration_value >= interval[0] and filtration_value < interval[1]:
-                persistence = interval[1] - interval[0]
-                if persistence > persistence_threshold:
-                    G.add_edge(simplex[0], simplex[1])
+# Filter edges (e.g., by length)
+max_strand_length = 1.0  # Adjust based on web scale
+for u, v in list(G.edges()):
+    if distance(points[u], points[v]) > max_strand_length:
+        G.remove_edge(u, v)
 
-# Visualize the graph
-pos = {i: points[i] for i in range(len(points))}
-nx.draw(G, pos, node_size=5, with_labels=False)
-plt.title("Reconstructed Web (Persistence Filtered)")
-plt.show()
+# Further processing (MST, planarization, etc.)
+web_graph = nx.minimum_spanning_tree(G)
+
+# Visualize
+plot_3d_graph(web_graph, points)

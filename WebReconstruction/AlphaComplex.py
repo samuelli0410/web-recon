@@ -358,7 +358,15 @@ if __name__ == "__main__":
     cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
     points, _,_,_ = splitIntoQuadrants(cloud.points, 0)
     points = laplacian_contraction(points, k=20, sL=2)
-    for r in range(4,10,3):
+    r_values = list(range(4, 10, 3))
+    fig, axs = plt.subplots(1, len(r_values), figsize=(5 * len(r_values), 5))
+
+    for i, r in enumerate(r_values):
         results = compute_3d_alpha_complex_via_projection(points, radius=r, 
-                                                     projection_method='pca')
-        visualize_projected_alpha_complex(points, results)
+                                                        projection_method='pca')
+        
+        visualize_projected_alpha_complex(points, results, ax=axs[i])
+        axs[i].set_title(f"Radius = {r}")
+
+    plt.tight_layout()
+    plt.show()
