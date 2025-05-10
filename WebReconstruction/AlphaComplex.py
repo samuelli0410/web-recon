@@ -352,7 +352,7 @@ if __name__ == "__main__":
     cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/quadrant_14.pcd")
     points, _,_,_ = splitIntoQuadrants(cloud.points, 0)
     points = laplacian_contraction(points, k=20, sL=2)
-    r_values = list(range(4, 10, 3))
+    r_values = list(range(1, 10, 3))
     fig, axs = plt.subplots(1, len(r_values), figsize=(5 * len(r_values), 5))
 
     for i, r in enumerate(r_values):
