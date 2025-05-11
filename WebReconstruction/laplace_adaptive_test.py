@@ -1,20 +1,12 @@
 import numpy as np
 import open3d as o3d
 from sklearn.neighbors import NearestNeighbors
-from sklearn.cluster import DBSCAN
 from scipy.spatial import Delaunay
 import heapq
 
-def find_min_coord_point(points):
-    """Finds the point with the smallest x, y, and z coordinates."""
-    min_index = np.argmin(np.sum(points, axis=1))
-    return min_index
 
-def find_max_coord_point(points):
-    """Finds the point with the largest x, y, and z coordinates."""
-    min_index = np.argmax(np.sum(points, axis=1))
-    return min_index
 
+# adaptive laplacian contraction (contracts more aggressively dependent on local density
 def estimate_local_density(points, k=10):
     """Estimate local density as inverse average k-NN distance (excluding self)."""
     nbrs = NearestNeighbors(n_neighbors=k+1).fit(points)
@@ -45,6 +37,7 @@ def adaptive_laplacian_contraction(points, k=10, base_lambda=3, exponent=1.2, it
 
     return points
 
+# removing redundant points by deleting all points within a radius of a specific point
 def remove_redundant_points(points, threshold=0.1):
     nbrs = NearestNeighbors(radius=threshold).fit(points)
     visited = np.zeros(len(points), dtype=bool)
@@ -63,26 +56,9 @@ def remove_redundant_points(points, threshold=0.1):
 
     return np.array(unique_points)
 
-def volexReduction(points, eps = 0.5):
-    points = points.copy()
-    model = DBSCAN(eps, min_samples = 3)
-    clumps = model.fit_predict(points)
-    labels = set(clumps)-{-1}
-    print(len(labels))
-    clump_dict = {}
-    clumpPoints = set()
-    for i in labels:
-        clump_points = points[clumps == i]
-        if len(clump_points)> 1:
-            clump_center = np.median(clump_points, axis=0)    
-            # print(clump_points, clumpcenter)
-            for point in clump_points:
-                clumpPoints.add(tuple(point))
-                clump_dict[tuple(point)] = clump_center
-                # print(clump_center)
-    newpoints = [x if tuple(x) not in clumpPoints else clump_dict[tuple(x)] for x in points]
-    return newpoints
 
+
+# pcd and graph visualization functions
 def vis_pcd(contracted_points):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(contracted_points)
@@ -137,6 +113,19 @@ def visualize_graph_points_overlay(points, edges, cloud):
     vis.run()
     vis.destroy_window()
 
+
+
+# minimum spanning tree generation
+def find_min_coord_point(points):
+    """Finds the point with the smallest x, y, and z coordinates."""
+    min_index = np.argmin(np.sum(points, axis=1))
+    return min_index
+
+def find_max_coord_point(points):
+    """Finds the point with the largest x, y, and z coordinates."""
+    min_index = np.argmax(np.sum(points, axis=1))
+    return min_index
+
 def prim(points, rootidx, k=10):
     n = len(points)
     if n == 0:
@@ -180,6 +169,7 @@ def prim(points, rootidx, k=10):
     
     return mst_edges
 
+# unused at the moment, attempts not to make an edge with aggressive turns
 def prim_directional(points, rootidx, k=10, angle_bias_strength=0.5, angle_threshold_degrees=30):
     n = len(points)
     if n == 0:
@@ -238,48 +228,9 @@ def prim_directional(points, rootidx, k=10, angle_bias_strength=0.5, angle_thres
 
     return mst_edges
 
-def delaunay_graph(points, distance_threshold=6):
-    """
-    Creates a graph based on Delaunay triangulation with a distance restriction.
-    
-    Parameters:
-    - points: (n, d) ndarray, where n is the number of points and d is the dimensionality of the points.
-    - distance_threshold: The maximum allowed distance for edges to be added to the graph.
-    
-    Returns:
-    - edges: List of tuples representing edges in the graph.
-    """
-    # Perform Delaunay triangulation
-    tri = Delaunay(points)
-    
-    # Initialize a set to store edges (avoid duplicates)
-    edges = set()
-    
-    # Function to calculate Euclidean distance between two points
-    def distance(p1, p2):
-        return np.linalg.norm(p1 - p2)
 
-    # Iterate over the triangles (simplices) in the triangulation
-    for simplex in tri.simplices:
-        # Extract the three edges of the triangle
-        for i in range(3):
-            # Create edge as a sorted tuple to ensure it's undirected
-            edge = tuple(sorted([simplex[i], simplex[(i+1)%3]]))
-            
-            # Calculate the Euclidean distance between the points in the edge
-            p1, p2 = points[edge[0]], points[edge[1]]
-            dist = distance(p1, p2)
-            
-            # Only add the edge if the distance is less than or equal to the threshold
-            if dist <= distance_threshold:
-                edges.add(edge)
-    
-    # Convert the set of edges to a list and return
-    return list(edges)
 
-# degree 1 fix
-# check angle
-
+# fixing unrealistic degree one vertices (add_edges() and other functions)
 def euclidean_distance(p1, p2):
     return np.linalg.norm(p1 - p2)
 
@@ -300,6 +251,7 @@ def angle_between_vectors(v1, v2):
     cos_theta = dot_product / (magnitude_v1 * magnitude_v2)
     return np.arccos(np.clip(cos_theta, -1.0, 1.0))
 
+# old cost function, did not check angle of edge to candidate vertex
 def is_angle_too_sharp_old(v, closest_vertex, points, mst_edges, degree, threshold_angle_deg=60):
     # Convert angle threshold from degrees to radians
     threshold_angle_rad = np.radians(threshold_angle_deg)
@@ -327,6 +279,7 @@ def is_angle_too_sharp_old(v, closest_vertex, points, mst_edges, degree, thresho
 
     return False  # Accept the edge if no sharp angles are formed
 
+# new cost function
 def is_angle_too_sharp(v, neighbor, points, existing_edges, threshold_angle_deg=60, threshold_angle_deg_n=30):
     threshold_angle_rad = np.radians(threshold_angle_deg)
     threshold_angle_rad_n = np.radians(threshold_angle_deg_n)
@@ -353,20 +306,22 @@ def is_angle_too_sharp(v, neighbor, points, existing_edges, threshold_angle_deg=
 
     return False
 
-def add_edges(mst_edges, points, degree, max_angle_threshold_deg=60):
+def add_edges(mst_edges, points, degree, max_angle_threshold_deg=60, deg_one_penalty=0.8):
     existing_edges = set(tuple(sorted(edge)) for edge in mst_edges)
     new_edges = []
     degree_one_vertices = find_degree_one_vertices(degree)
 
     for v in degree_one_vertices:
         candidates = []
+        if degree[v] != 1:
+            continue
         
         # Build list of all possible candidates and their (penalized) distances
         for i in range(len(points)):
             if i != v and tuple(sorted([v, i])) not in existing_edges:
                 distance = euclidean_distance(points[v], points[i])
                 if degree[i] == 1:
-                    distance *= 1  # Favor connecting degree-1 vertices
+                    distance *= deg_one_penalty  # Favor connecting degree-1 vertices
                 candidates.append((distance, i))
         
         # Sort candidates by penalized distance
@@ -384,11 +339,19 @@ def add_edges(mst_edges, points, degree, max_angle_threshold_deg=60):
 
     return new_edges
 
+
+
+
+
 if __name__ == "__main__":
+
+    # load pcd
     pcd_o = o3d.io.read_point_cloud("video_processing/point_clouds/059_spiderless_quadrant.pcd")
     points = np.asarray(pcd_o.points)
     print(points.__len__())
 
+    # contraction
+    # not entirely sure if removing redundant before and after contraction actually helps?
     points = remove_redundant_points(points, threshold=1)
     contracted_points = adaptive_laplacian_contraction(points, k=15, iterations=5)
     cleaned_points = remove_redundant_points(contracted_points, threshold=1.5)
@@ -397,19 +360,17 @@ if __name__ == "__main__":
     new_pcd.points = o3d.utility.Vector3dVector(cleaned_points)
     print(cleaned_points.__len__())
 
-    #cleaned_points = volexReduction(cleaned_points, eps=1.1)
-    #print(cleaned_points.__len__())
-
     #vis_pcd(cleaned_points)
     
+    # MST generation
     root_idx = find_min_coord_point(cleaned_points)
     print("found")
     graph_edges = prim(cleaned_points, root_idx)
-    #graph_edges = delaunay_graph(cleaned_points, distance_threshold=6)
     #graph_edges = prim_directional(cleaned_points, root_idx, angle_bias_strength=0.5, angle_threshold_degrees=15)
     print("prims completed")
-    visualize_graph_points_overlay(cleaned_points, graph_edges, new_pcd)
-    graph_edges = graph_edges + add_edges(graph_edges, cleaned_points, deg_list(graph_edges, cleaned_points))
+    #visualize_graph_points_overlay(cleaned_points, graph_edges, new_pcd)
+
+    # creating new edges, connecting leaves of the MST
+    graph_edges = graph_edges + add_edges(graph_edges, cleaned_points, deg_list(graph_edges, cleaned_points), max_angle_threshold_deg=75, deg_one_penalty=0.9)
     print("infill completed")
     visualize_graph_points_overlay(cleaned_points, graph_edges, new_pcd)
-    
