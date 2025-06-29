@@ -148,15 +148,44 @@ print(f"Loaded {len(points)} points")
 print("Building alpha complex...")
 alpha_complex = gudhi.AlphaComplex(points=points)
 simplex_tree = alpha_complex.create_simplex_tree()
-
 #Extract pairs - focused on H1 holes
 simplex_tree.compute_persistence()
 h1_pairs = simplex_tree.persistence_intervals_in_dimension(1)
+
 for birth, death in h1_pairs:
-    print(f"Hole born at alpha={birth:.4f}, died at alpha={death:.4f}, persistence={death - birth:.4f}")
+    edges_birth = set()
+    edges_death = set()
+
+    for simplex, filt in simplex_tree.get_skeleton(1):
+        if len(simplex) == 2:
+            if filt <= birth:
+                edges_birth.add(tuple(sorted(simplex)))
+            if filt <= death:
+                edges_death.add(tuple(sorted(simplex)))
+
+    approx_cycle = edges_birth - edges_death
+    if not approx_cycle:
+        print("⚠️ No visible edges for this cycle — maybe it's trivial or poorly resolved.")
+        continue
+
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(points[:, 0], points[:, 1], points[:, 2], s=3, color='gray', alpha=0.2)
+
+    for u, v in approx_cycle:
+        p1, p2 = points[u], points[v]
+        ax.plot([p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]], color='red', linewidth=1.5)
+
+    ax.set_title(f"Approximate Cycle for Hole {idx}\nα={birth:.2f} → α={death:.2f}")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    plt.tight_layout()
+    plt.show()
 
 
 
+#Issue: prints out when the holes birth and die, but fails to mention where the holes are. 
 
 # G = nx.Graph()
 # for simplex, _ in simplex_tree.get_skeleton(1):
