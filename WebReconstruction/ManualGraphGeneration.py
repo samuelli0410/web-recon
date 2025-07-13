@@ -8,7 +8,7 @@ import sys
 
 def main():
     # ---- 1. Load the PCD ----
-    pcd_path = "video_processing/point_clouds/sparse3 255 2024-11-30 11-29-33.pcd"
+    pcd_path = "video_processing/point_clouds/46_cubes_cubes/cube_1_1_1.pcd"
     if not os.path.isfile(pcd_path):
         print(f"Error: file not found:\n  {pcd_path}")
         sys.exit(1)
@@ -60,7 +60,7 @@ EDGE ENTRY MODE:
             print("  → Please enter two integers separated by space.")
 
     # ---- 5. Save the graph ----
-    out_file = "graph.pkl"
+    out_file = "cube_1_1_1_graph.pkl"
     with open(out_file, "wb") as f:
         pickle.dump(G, f)
     print(f"[DONE] Graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges saved to {out_file}")

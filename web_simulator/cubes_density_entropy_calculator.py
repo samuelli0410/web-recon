@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
-fp = 'video_processing/point_clouds/@051 255 2024-11-29 15-42-41.pcd'
-num_levels = 10  # Specify the number of density levels
+fp = 'video_processing/point_clouds/@064 255 2024-12-10 17-49-41.pcd'
+num_levels = 100  # Specify the number of density levels
 
 # Step 1: Load the Point Cloud Data (PCD)
 def load_pcd(file_path):
@@ -17,7 +17,7 @@ def load_pcd(file_path):
     return points
 
 # Step 2: Subdivide the space and calculate density levels
-def calculate_density_levels(points, num_subdivisions, num_levels=10):
+def calculate_density_levels(points, num_subdivisions, num_levels=100):
     print(f"Calculating density levels with {num_subdivisions} subdivisions...")
     
     # Get the bounds of the point cloud

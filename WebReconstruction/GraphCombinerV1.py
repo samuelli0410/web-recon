@@ -323,7 +323,7 @@ def makeGraphs(a,b,c,d):
             print("SUMEDGE", len(SUMedges))
             
 
-cloud = o3d.io.read_point_cloud("C:/Users/samue/Downloads/Research/Spider/WebReconstruction/LargeWebConnectTest/@058 255 2024-12-05 04-26-14.pcd")
+cloud = o3d.io.read_point_cloud("video_processing/point_clouds/cube_1_0_1.pcd")
 
 
 print(len(cloud.points))

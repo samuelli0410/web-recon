@@ -1,6 +1,7 @@
 import open3d as o3d
+import numpy as np
 
-def visualize_pcd(file_path):
+def visualize_pcd(file_path, point_size=5.0):
     # Load the point cloud
     pcd = o3d.io.read_point_cloud(file_path)
     
@@ -9,10 +10,23 @@ def visualize_pcd(file_path):
         print("Error: Point cloud data is empty or could not be loaded.")
         return
     
-    # Display the point cloud
-    o3d.visualization.draw_geometries([pcd])
+    # Paint all points black
+    black = np.array([0.0, 0.0, 0.0])
+    pcd.paint_uniform_color(black)
+    
+    # Create a visualizer and add the point cloud
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    vis.add_geometry(pcd)
+    
+    # Set the point size
+    render_opt = vis.get_render_option()
+    render_opt.point_size = point_size
+    
+    # Run the visualizer
+    vis.run()
+    vis.destroy_window()
 
-# Replace 'your_file.pcd' with the path to your PCD file
-file_path = "video_processing/point_clouds/@051 255 2024-11-29 15-42-41.pcd"
-visualize_pcd(file_path)
-
+# Example usage:
+file_path = "video_processing/point_clouds/46_cubes_cubes/cube_1_1_1.pcd"
+visualize_pcd(file_path, point_size=10.0)

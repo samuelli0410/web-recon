@@ -206,7 +206,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Parameters
-pcd_file = "video_processing/point_clouds/@061 255 2024-12-05 13-00-48.pcd"  # Path to your PCD file
+pcd_file = "video_processing/point_clouds/@064 255 2024-12-10 17-49-41.pcd"  # Path to your PCD file
 bins = 100  # Number of bins in each dimension for the histogram
 
 # Load the point cloud

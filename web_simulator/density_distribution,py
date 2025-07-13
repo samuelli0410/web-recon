@@ -104,7 +104,7 @@ def save_color_bar(density_grid, color_bar_path):
 # Main function to execute the steps and visualize density distribution
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
-    file_path = "video_processing/point_clouds/@058 255 2024-12-05 04-26-14.pcd"
+    file_path = "video_processing/point_clouds/@064 255 2024-12-10 17-49-41.pcd"
     
     # Step 1: Load the PCD file
     points = load_pcd(file_path)
