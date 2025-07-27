@@ -1,124 +1,11 @@
-# import open3d as o3d
-# import numpy as np
-# import matplotlib.pyplot as plt
-
-# # File path
-# fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
-# num_levels = 10  # Specify the number of density levels
-
-# # Step 1: Load the Point Cloud Data (PCD)
-# def load_pcd(file_path):
-#     print("Loading the point cloud...")
-#     pcd = o3d.io.read_point_cloud(file_path)
-#     points = np.asarray(pcd.points)
-#     if points.size == 0:
-#         raise ValueError("The point cloud data is empty.")
-#     print(f"Loaded point cloud with {len(points)} points.")
-#     return points
-
-# # Step 2: Subdivide the space and calculate density levels
-# def calculate_density_levels(points, num_subdivisions):
-#     print(f"Calculating density levels with {num_subdivisions} subdivisions...")
-    
-#     # Get the bounds of the point cloud
-#     min_bound = points.min(axis=0)
-#     max_bound = points.max(axis=0)
-    
-#     # Calculate the size of each subdivision
-#     subdivision_size = (max_bound - min_bound) / num_subdivisions
-    
-#     # Initialize the density levels array
-#     density_levels = np.zeros(num_subdivisions**3, dtype=int)
-    
-#     # Calculate the density levels
-#     indices = ((points - min_bound) / subdivision_size).astype(int)
-#     indices = np.clip(indices, 0, num_subdivisions - 1)  # Ensure indices are within bounds
-#     flat_indices = np.ravel_multi_index(indices.T, (num_subdivisions, num_subdivisions, num_subdivisions))
-#     for idx in flat_indices:
-#         density_levels[idx] += 1
-    
-#     # Assign density levels, reserving 0 for exactly zero density and scaling non-zero densities
-#     max_density = density_levels.max()
-#     print("Max density:", max_density)
-#     if max_density > 0:
-        # nonzero_indices = density_levels > 0
-        # Scale non-zero density levels to fit within [1, num_levels - 1]
-        # density_levels[nonzero_indices] = (density_levels[nonzero_indices] * (num_levels - 1) / max_density).astype(int) + 1
-#         nonzero_indices = density_levels > 0
-#         # Scale non-zero density levels to fit within [1, num_levels - 1]
-#         density_levels[nonzero_indices] = (density_levels[nonzero_indices] * (num_levels - 1) / max_density).astype(int) + 1
-    
-#     # Ensure density levels are within [0, num_levels - 1]
-#     density_levels = np.clip(density_levels, 0, num_levels - 1)
-    
-#     return density_levels
-
-# # Step 3: Record the distribution of the density levels
-# def record_distribution(density_levels):
-#     print("Recording the distribution of density levels...")
-    
-#     # Count how many subregions fall into each density level
-#     distribution = np.zeros(num_levels, dtype=int)
-#     for level in density_levels:
-#         distribution[level] += 1
-    
-#     print(f"Distribution of density levels: {distribution}")
-#     return distribution
-
-# # Step 4: Compute entropy based on the distribution of density levels
-# def compute_entropy(distribution, exclude_zero=False):
-#     print(f"Computing entropy (excluding level 0: {exclude_zero})...")
-    
-#     # Normalize the distribution to get probabilities
-#     if exclude_zero:
-#         distribution = distribution[1:]  # Exclude level 0
-#     probabilities = distribution / distribution.sum()
-    
-#     # Compute entropy
-#     entropy = -np.sum(probabilities[probabilities > 0] * np.log2(probabilities[probabilities > 0]))
-    
-#     print(f"Computed entropy: {entropy}")
-#     return entropy
-
-# # Step 5: Calculate and record entropies for different subdivisions
-# def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=500):
-#     entropies_including_zero = []
-#     entropies_excluding_zero = []
-    
-#     for num_subdivisions in range(min_subdivisions, max_subdivisions + 1,10):
-#         density_levels = calculate_density_levels(points, num_subdivisions)
-#         distribution = record_distribution(density_levels)
-#         entropy_including_zero = compute_entropy(distribution, exclude_zero=False)
-#         entropy_excluding_zero = compute_entropy(distribution, exclude_zero=True)
-#         entropies_including_zero.append((num_subdivisions, entropy_including_zero))
-#         entropies_excluding_zero.append((num_subdivisions, entropy_excluding_zero))
-    
-#     return entropies_including_zero, entropies_excluding_zero
-
-# if __name__ == "__main__":
-#     # Example usage
-#     file_path = fp 
-#     points = load_pcd(file_path)
-#     entropies_including_zero, entropies_excluding_zero = calculate_entropies_for_subdivisions(points)
-    
-#     # Plot the results
-#     subdivisions, entropies_inc = zip(*entropies_including_zero)
-#     _, entropies_exc = zip(*entropies_excluding_zero)
-    
-#     plt.figure()
-#     plt.plot(subdivisions, entropies_inc, label='Including Level 0')
-#     plt.plot(subdivisions, entropies_exc, label='Excluding Level 0')
-#     plt.xlabel('Number of Subdivisions')
-#     plt.ylabel('Entropy')
-#     plt.legend()
-#     plt.title('Entropy vs. Number of Subdivisions')
-#     plt.show()
 import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
 
 # File path
-fp = 'video_processing/point_clouds/@011 255 2024-10-04 03-20-37.pcd'
+fp = 'video_processing/point_clouds/@030 255 2024-11-07 22-02-20.pcd'
+fp2 = 'video_processing/point_clouds/@047 255 2024-11-25 20-44-12.pcd'
+fp3 = 'video_processing/point_clouds/@062 255 2024-12-05 13-12-57.pcd'
 num_levels = 10  # Specify the number of density levels
 
 # Step 1: Load the Point Cloud Data (PCD)
@@ -206,35 +93,80 @@ def compute_entropy(distribution, exclude_zero=False):
     return entropy
 
 # Step 5: Calculate and record entropies for different subdivisions
-def calculate_entropies_for_subdivisions(points, min_subdivisions=10, max_subdivisions=200):
+def calculate_entropies_for_subdivisions(points, min_subdivisions=5, max_subdivisions=150):
     entropies_including_zero = []
     entropies_excluding_zero = []
+    averages_excluding_zero = []
     
-    for num_subdivisions in range(min_subdivisions, max_subdivisions + 1, 2):
+    for num_subdivisions in range(min_subdivisions, max_subdivisions + 1):
         density_levels = calculate_density_levels(points, num_subdivisions)
         distribution = record_distribution(density_levels)
         entropy_including_zero = compute_entropy(distribution, exclude_zero=False)
         entropy_excluding_zero = compute_entropy(distribution, exclude_zero=True)
+        entropies_excluding_zero.append(entropy_excluding_zero)
+        # Append the sliding average of entropies of previous 5
+        averages_excluding_zero.append((num_subdivisions, np.mean(entropies_excluding_zero[-20:])))
         entropies_including_zero.append((num_subdivisions, entropy_including_zero))
-        entropies_excluding_zero.append((num_subdivisions, entropy_excluding_zero))
     
-    return entropies_including_zero, entropies_excluding_zero
+    return entropies_including_zero, averages_excluding_zero
 
 if __name__ == "__main__":
     # Example usage
     file_path = fp 
     points = load_pcd(file_path)
-    entropies_including_zero, entropies_excluding_zero = calculate_entropies_for_subdivisions(points)
+    entropies_including_zero, entropies_excluding_zero,  = calculate_entropies_for_subdivisions(points)
     
     # Plot the results
     subdivisions, entropies_inc = zip(*entropies_including_zero)
     _, entropies_exc = zip(*entropies_excluding_zero)
+
+    file_path2 = fp2
+    points2 = load_pcd(file_path2)
+    entropies_including_zero2, entropies_excluding_zero2,  = calculate_entropies_for_subdivisions(points2)
     
-    plt.figure()
-    plt.plot(subdivisions, entropies_inc, label='Including Level 0')
-    plt.plot(subdivisions, entropies_exc, label='Excluding Level 0')
-    plt.xlabel('Number of Subdivisions')
-    plt.ylabel('Entropy')
-    plt.legend()
-    plt.title('Entropy vs. Number of Subdivisions')
-    plt.show()
+    # Plot the results
+    subdivisions2, entropies_inc2 = zip(*entropies_including_zero2)
+    _, entropies_exc2 = zip(*entropies_excluding_zero2)
+
+    file_path3 = fp3
+    points3 = load_pcd(file_path3)
+    entropies_including_zero3, entropies_excluding_zero3,  = calculate_entropies_for_subdivisions(points3)
+    
+    # Plot the results
+    subdivisions3, entropies_inc3 = zip(*entropies_including_zero3)
+    _, entropies_exc3 = zip(*entropies_excluding_zero3)
+    
+    # plt.figure()
+    # plt.plot(subdivisions, entropies_inc, label='Web 1 Including Density Level 0')
+    # plt.plot(subdivisions, entropies_exc, label='Wen 1 Excluding Density Level 0')
+    # plt.plot(subdivisions2, entropies_inc2, label='Web 2 Including Density Level 0')
+    # plt.plot(subdivisions2, entropies_exc2, label='Web 2 Excluding Density Level 0')
+    # plt.plot(subdivisions3, entropies_inc3, label='Web 3 Including Density Level 0')
+    # plt.plot(subdivisions3, entropies_exc3, label='Web 3 Excluding Density Level 0')
+    # plt.xlabel('Number of Subdivisions')
+    # plt.ylabel('Entropy (H) in bits')
+    # plt.legend()
+    # plt.title('Entropy vs. Number of Subdivisions along Each Dimension')
+    # plt.show()
+
+
+# differentiate webs by line style; include/exclude level 0 by color
+styles = ['-', '--', ':']
+datasets = [
+    (subdivisions,   entropies_inc,  entropies_exc,  'Web 1'),
+    (subdivisions2,  entropies_inc2, entropies_exc2, 'Web 2'),
+    (subdivisions3,  entropies_inc3, entropies_exc3, 'Web 3'),
+]
+
+plt.figure()
+for ls, (subs, inc, exc, label) in zip(styles, datasets):
+    # blue = including level 0, red = excluding level 0
+    plt.plot(subs, inc,  linestyle=ls, color='blue', label=f'{label} Including Level 0')
+    plt.plot(subs, exc,  linestyle=ls, color='red',  label=f'{label} Excluding Level 0')
+
+plt.xlabel('Number of Subdivisions')
+plt.ylabel('Entropy (H) in bits')
+plt.title('Entropy vs. Number of Subdivisions along the Longest Dimension')
+plt.legend()
+plt.tight_layout()
+plt.show()

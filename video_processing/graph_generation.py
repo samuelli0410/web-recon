@@ -8,6 +8,11 @@ from tqdm import tqdm
 import pyvista as pv
 import pickle
 from scipy.spatial import distance
+from scipy.ndimage import binary_dilation
+from skimage.morphology import skeletonize_3d
+
+from pcd_generation_improved import voxel_to_pcd, voxelize
+
 
 
 def generate_graph(file_path: str, distance_threshold: float, out_dir: str):
@@ -108,6 +113,44 @@ def connect_disjoint_subsets(graph, threshold):
                 print(f"Added edge between {point1} and {point2} (distance: {dist})")
     return graph
 
+def dilate_voxel_grid(voxel_grid, x):
+    """
+    Dilate points in a voxel grid by x voxels.
+
+    Parameters:
+    voxel_grid (np.ndarray): 3D NumPy array representing the voxel grid (1 for filled voxel, 0 for empty).
+    x (int): Number of voxels to dilate the points by.
+
+    Returns:
+    np.ndarray: 3D NumPy array representing the dilated voxel grid.
+    """
+    # Create a structuring element that defines the neighborhood for dilation
+    struct_element = np.ones((2*x+1, 2*x+1, 2*x+1), dtype=bool)
+    
+    # Perform binary dilation on the voxel grid
+    dilated_voxel_grid = binary_dilation(voxel_grid, structure=struct_element)
+    
+    return dilated_voxel_grid.astype(int)
+
+
+def skeletonize_voxel_grid(voxel_grid):
+    """
+    Skeletonize the points in a voxel grid.
+
+    Parameters:
+    voxel_grid (np.ndarray): 3D NumPy array representing the voxel grid (1 for filled voxel, 0 for empty).
+
+    Returns:
+    np.ndarray: 3D NumPy array representing the skeletonized voxel grid.
+    """
+    # Ensure the input grid is binary (1 for filled, 0 for empty)
+    voxel_grid_binary = voxel_grid > 0
+
+    # Perform skeletonization
+    skeletonized_grid = skeletonize_3d(voxel_grid_binary)
+
+    return skeletonized_grid.astype(int)
+
 if __name__ == "__main__":
     # parser = argparse.ArgumentParser()
     # parser.add_argument("--src_file", help="Source pointcloud file (.pcd).")
@@ -116,18 +159,31 @@ if __name__ == "__main__":
 
     # generate_graph(file_path=args.src_file, distance_threshold=args.threshold)
     #generate_graph(file_path="video_processing/point_clouds/thin_test.pcd", distance_threshold=2, out_dir="video_processing/graphs/thin_test.pkl")
-    with open("video_processing/graphs/thin_test.pkl", "rb") as f:
-        graph = pickle.load(f)
-    # visualize_graph(graph)
-    degrees = [deg for _, deg in graph.degree()]
+    # with open("video_processing/graphs/thin_test.pkl", "rb") as f:
+    #     graph = pickle.load(f)
+    # # visualize_graph(graph)
+    # degrees = [deg for _, deg in graph.degree()]
 
-    # Plot degree distribution as a histogram
-    plt.hist(degrees, bins=range(min(degrees), max(degrees) + 1), edgecolor='black', alpha=0.7)
-    plt.title('Degree Distribution')
-    plt.xlabel('Degree')
-    plt.ylabel('Frequency')
-    plt.grid(True)
-    plt.show()
+    # # Plot degree distribution as a histogram
+    # plt.hist(degrees, bins=range(min(degrees), max(degrees) + 1), edgecolor='black', alpha=0.7)
+    # plt.title('Degree Distribution')
+    # plt.xlabel('Degree')
+    # plt.ylabel('Frequency')
+    # plt.grid(True)
+    # plt.show()
+    pcd = o3d.io.read_point_cloud("video_processing/point_clouds/@032 255 2024-11-08 04-05-31.pcd")
+    
+    voxel_grid = voxelize(pcd)
+    naive_skeleton_voxel = skeletonize_voxel_grid(voxel_grid)
+    naive_skeleton_pcd = voxel_to_pcd(naive_skeleton_voxel)
+    
+    thickened_voxel = dilate_voxel_grid(voxel_grid, 2)
+    skeleton_voxel = skeletonize_voxel_grid(thickened_voxel)
+    skeleton_pcd = voxel_to_pcd(skeleton_voxel)
+
+    o3d.visualization.draw_geometries_with_editing([pcd])
+    o3d.visualization.draw_geometries([naive_skeleton_pcd])
+    o3d.visualization.draw_geometries([skeleton_pcd])
 
 
 
