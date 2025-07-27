@@ -8,12 +8,16 @@ import pyautogui
 from queue import Queue
 import serial
 import pandas as pd
+from scanning_utils import get_size, clean_line, is_file_stable
 
- 
+#       steps per rev      num revs
+SCAN_TIME = 3200 * 500 * 2 * 6 * 1e-6
+#                 step delay      in sec
+
+
 # HARD LIMITS ON START AND END DISTANCE
 CLOSE_START_DISTANCE = 0.888
 FAR_END_DISTANCE = 1.035
-
 # Default start and end distance if none are provided at start, otherwise it uses the previous scan distance
 start_distance = 0.888
 end_distance = 1.035
@@ -27,10 +31,6 @@ s3_client = boto3.client('s3')
 # Replace with your S3 bucket name
 bucket_name = 'spider-videos'
 
-
-# Set video length (seconds)
-video_length = 15 # redundant if determined by arduino
-
 # Set waiting time (seconds) between videos
 wait_time = 0
 
@@ -38,14 +38,19 @@ wait_time = 0
 delete_video = True
 
 # Choose port Arduino is connected to
-arduino_port = "COM3"
+arduino_port = "COM6"
 
 arduino = serial.Serial(arduino_port, 115200)
 
 LED_arduino_port = "COM4"
 
-LED_arduino = serial.Serial(LED_arduino_port, 9600)
-time.sleep(3)
+try:
+    LED_arduino = serial.Serial(LED_arduino_port, 9600)
+    print("Laser Arduino connected.")
+except:
+    LED_arduino = None
+    print("Laser Arduino not connected.")
+time.sleep(0.5)
 
 brightness_dict = {
     0: 0,
@@ -57,7 +62,12 @@ brightness_dict = {
 
 infrared_port = 'COM5'
 # Initialize serial connection
-ser = serial.Serial(infrared_port, 9600, timeout=1)  # Adjust '/dev/ttyS0' as needed
+try:
+    ser = serial.Serial(infrared_port, 9600, timeout=1)  # Adjust '/dev/ttyS0' as needed
+    print("Infrared Arduino connected.")
+except:
+    ser = None
+    print("Infrared Arduino not connected.")
 
 # Command to initiate measurement
 measure_command = bytearray([0x80, 0x06, 0x03, 0x77])
@@ -65,38 +75,22 @@ measure_command = bytearray([0x80, 0x06, 0x03, 0x77])
 
 upload_batch_size = 4  # number of scans to batch upload
 
-def clean_line(line: str):
-    i = 0
-    for c in line: 
-        if not c.isdigit() and not c == '.':
-            break
-        i += 1
-    return line[:i]
-
-# def wait_for_arduino():
-#     while True:
-#         if arduino.in_waiting > 0:
-#             if arduino.read() == b'd':
-#                 break
-
-
 def send_ready_signal(speed=1):
     if speed == 1:
         arduino.write(b'1')
     elif speed == 0:
         arduino.write(b'4')
 
-
-
 def send_back_signal():
     arduino.write(b'2')
-
 
 def send_stop_signal():
     arduino.write(b'3')
 
 
 def send_LED_brightness(brightness_level):
+    if LED_arduino is None:
+        return
     print(f"Brightness {brightness_level}")
     if brightness_level == 0:
         LED_arduino.write(b'0')
@@ -110,26 +104,6 @@ def send_LED_brightness(brightness_level):
         LED_arduino.write(b'4')
     else:
         raise Exception("Invalid brightness value.")
-
-
-# def wait_arduino_recovery():
-#     while True:
-#         if arduino.in_waiting > 0:
-#             if arduino.read() == b's':
-#                 print("Backward finished.")
-#                 break
-
-
-def get_size(path):
-    size = os.path.getsize(path)
-    if size < 1024:
-        return f"{size} bytes"
-    elif size < pow(1024,2):
-        return f"{round(size/1024, 2)} KB"
-    elif size < pow(1024,3):
-        return f"{round(size/(pow(1024,2)), 2)} MB"
-    elif size < pow(1024,4):
-        return f"{round(size/(pow(1024,3)), 2)} GB"
 
 
 processed_files = set()
@@ -214,7 +188,7 @@ def check_input(user_input):
         else:
             num_scans = int(num_scans)    
 
-        cycle_brightness = 0
+        cycle_brightness = 4
         running = True
         print(f"Current running settings: {current_spider_name, num_scans, start_distance, end_distance}")
 
@@ -224,27 +198,9 @@ def check_input(user_input):
     return current_spider_name, num_scans, start_distance, end_distance
 
 
-def is_file_stable(file_path, wait_time=2, retries=3):
-    last_size = -1
-
-    while True:
-        try:
-            current_size = os.path.getsize(file_path)
-        except FileNotFoundError:
-            return False
-        
-        if current_size == last_size:
-            retries -= 1
-        
-        last_size = current_size
-
-        if retries <= 0:
-            return True
-        
-        time.sleep(wait_time)
-
-
 def read_infrared_distance():
+    if ser is None:
+        return None
     ser.write(measure_command)
     start_timeout = time.time()
     while ser.in_waiting < 11:
@@ -266,8 +222,9 @@ def read_infrared_distance():
 def reset_position():
     arduino.reset_input_buffer()
     arduino.reset_output_buffer()
-    LED_arduino.reset_input_buffer()
-    LED_arduino.reset_output_buffer()
+    if LED_arduino is not None:
+        LED_arduino.reset_input_buffer()
+        LED_arduino.reset_output_buffer()
     print("reset buffers")
     print("Resetting position...")
     send_LED_brightness(0)
@@ -324,14 +281,15 @@ if __name__ == "__main__":
 
     recording_begin_time = time.time()
 
-    cycle_brightness = 0
+    cycle_brightness = 4
     cnt_scan = 0
 
     if current_spider_name == "read":
         arduino.reset_input_buffer()
         arduino.reset_output_buffer()
-        LED_arduino.reset_input_buffer()
-        LED_arduino.reset_output_buffer()
+        if LED_arduino is not None:
+            LED_arduino.reset_input_buffer()
+            LED_arduino.reset_output_buffer()
         distance = None
         while distance == None:
             distance = read_infrared_distance()
@@ -342,7 +300,7 @@ if __name__ == "__main__":
             print(distance)
         exit()
 
-    reset_position()
+    #reset_position()
 
     try:
         while True:
@@ -356,45 +314,40 @@ if __name__ == "__main__":
             print(f"Scan {cnt_scan + 1}")
             print(f"Current runtime: {str(datetime.timedelta(seconds=(time.time() - recording_begin_time)))}")
             
-            current_brightness = brightness_dict[cycle_brightness + 1]
-            send_LED_brightness(cycle_brightness + 1)
+            current_brightness = brightness_dict[cycle_brightness]
+            send_LED_brightness(cycle_brightness)
 
-            distance = None
-            while distance == None:
-                distance = read_infrared_distance()
-                print(distance)
+            # distance = None
+            # while distance == None:
+            #     distance = read_infrared_distance()
+            #     print(distance)
             
             print("Sending hotkeys.")
             pyautogui.hotkey('ctrl', 'f11', interval=0.1)
             print(f"Video recording start: scan {cnt_scan + 1}.")
 
-            arduino.reset_input_buffer()
+            # arduino.reset_input_buffer()
+            time.sleep(0.1)
+            send_LED_brightness(cycle_brightness)
             time.sleep(.5)
             print("ready signal sent")
             send_ready_signal(speed=0)
-            
+            time.sleep(0.25)
             start_timer = time.perf_counter()
-
-            while distance <= end_distance:
-                event_handler.time_info.append(time.perf_counter() - start_timer)
-                distance = read_infrared_distance()
-                event_handler.distance_info.append(distance)
-                print(distance)
-
-            print("sending back signal")
+            time.sleep(SCAN_TIME + 1)
+            print("back signal sent")
             send_back_signal()
             send_LED_brightness(0)
             if current_spider_name != "reset":
                 pyautogui.hotkey('ctrl', 'f12', interval=0.1)
                 print(f"Video recording end: scan {cnt_scan + 1}.")
-            while distance >= start_distance:
-                distance = read_infrared_distance()
-                print(distance)
-            print("sending stop signal")
-            send_stop_signal()
+            # while distance >= start_distance:
+            #     distance = read_infrared_distance()
+            #     print(distance)
+            # print("sending stop signal")
+            # send_stop_signal()
 
-            # Make csv file
-            data_df = pd.DataFrame({"Time": event_handler.time_info, "Distance": event_handler.distance_info})
+            time.sleep(SCAN_TIME + 1)
             print("Distance data sample for", event_handler.csv_file_name)
             print(data_df.head())
             print("Total number of logs:", len(data_df))
@@ -411,7 +364,7 @@ if __name__ == "__main__":
 
 
             cnt_scan += 1
-            cycle_brightness = (cycle_brightness + 1) % 4
+            cycle_brightness = (cycle_brightness - 1) if (cycle_brightness - 1) > 0 else 4
 
             print("Showing current queue state:", event_handler.upload_queue)
             if len(event_handler.upload_queue) == upload_batch_size:
@@ -444,7 +397,7 @@ if __name__ == "__main__":
         print("Batch upload complete.")
         upload_end_time = time.time()
         print(f"Batch upload took {upload_end_time - upload_start_time:.2f} seconds.")
-        reset_position()
+        #reset_position()
         observer.stop()
         observer.join()
         print("Processes stopped.")
