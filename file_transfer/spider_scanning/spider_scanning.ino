@@ -7,7 +7,7 @@
 */
 
 #include <SoftwareSerial.h>
-SoftwareSerial mySerial(2,3);//Define software serial, 3 is TX, 2 is RX
+//SoftwareSerial mySerial(2,3);//Define software serial, 3 is TX, 2 is RX
 char buff[4]={0x80,0x06,0x03,0x77};
 unsigned char data[11]={0};
 bool forward = false;
@@ -28,13 +28,17 @@ bool forward = false;
 fewer scans. This also gives the transistors more time to cool down, which will prevent overheating and extend circuit lifespan */
 #define TIME_BETWEEN 2500  // 2.5 sec
 
+byte shutdownCommand[] = {0xFA, 0x04, 0x02, 0x00};
 
+byte continuousScanning[] = {0x80, 0x06, 0x03, 0x77};
+
+byte singleRead[] = {0x80, 0x06, 0x02, 0x78};
 
 
 void setup() {
   
   Serial.begin(115200); // begin serial communication
-  mySerial.begin(9600);
+  //mySerial.begin(9600);
 
   pinMode(TOP_LEFT, OUTPUT);
   pinMode(TOP_RIGHT, OUTPUT);
@@ -47,6 +51,8 @@ void setup() {
   analogWrite(BOTTOM_RIGHT, OFF);
   // digitalWrite(LASER, HIGH);
   delay(2000); // time when the laser is on but the camera is not moving, setup time and buffer to upload new code before circuit starts running
+  //mySerial.write(continuousScanning, sizeof(continuousScanning));
+  delay(1000);
 }
 
 void go_backward() {
@@ -57,12 +63,12 @@ void go_backward() {
   analogWrite(BOTTOM_RIGHT, ON_BACKWARD);
 }
 
-void go_forward() {
+void go_forward(int speed) {
   analogWrite(TOP_LEFT, OFF);
   analogWrite(BOTTOM_RIGHT, OFF);
   delay(20);
-  analogWrite(TOP_RIGHT, ON_FORWARD);
-  analogWrite(BOTTOM_LEFT, ON_FORWARD);
+  analogWrite(TOP_RIGHT, speed);
+  analogWrite(BOTTOM_LEFT, speed);
 }
 
 void stop_delay() {
@@ -73,15 +79,12 @@ void stop_delay() {
 }
 
 bool stopped = true;
-
+// int loop_counter = 0;
 void loop() {
-  mySerial.print(buff);
-
-  while (1) {
-    if (Serial.available() > 0) {
+  if (Serial.available() > 0) {
     char cmd = Serial.read();  // Read once and use the value multiple s.
     if (cmd == '1' && !forward) {
-      go_forward();
+      go_forward(ON_FORWARD);
       forward = true;
       stopped = false;
     }
@@ -95,45 +98,14 @@ void loop() {
       stop_delay();
       stopped = true;
     }
-    
+
+    if (cmd == '4' && !forward) {
+      go_forward(240);
+      forward = true;
+      stopped = false;
+    }
+
   }
-  
-  
-  if(mySerial.available() >= 0)//Determine whether there is data to read on the serial
-  {
-    delay(50);
-    for(int i=0;i<11;i++)
-    {
-      data[i]=mySerial.read();
-    }
-    unsigned char Check=0;
-    for(int i=0;i<10;i++)
-    {
-      Check=Check+data[i];
-    }
-    Check=~Check+1;
-    if(data[10]==Check)
-    {
-      if(data[3]=='E'&&data[4]=='R'&&data[5]=='R')
-      {
-        Serial.println("Out of range");
-      }
-      else
-      {
-        float distance=0;
-        distance=(data[3]-0x30)*100+(data[4]-0x30)*10+(data[5]-0x30)*1+(data[7]-0x30)*0.1+(data[8]-0x30)*0.01+(data[9]-0x30)*0.001;
-        Serial.println(distance, 3);
-      }
-    }
-    else
-    {
-      //Serial.println("Invalid Data!");
-    }
-  }
-  delay(20);
-  }
-  // feel free to add anything else that the python integration should do and/or control signals
-  
 }
 
   
